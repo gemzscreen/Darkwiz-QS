@@ -38,6 +38,15 @@ a{color:var(--accent-lite)}
 
 /* ── layout ─────────────────────────────────────────── */
 .app{display:flex;min-height:100vh}
+body.rail-off{--rail:0px}
+body.rail-off .rail{display:none}
+.railclose{
+  border:1px solid #3C5064;background:transparent;color:#8FA3B6;width:24px;height:24px;
+  border-radius:3px;cursor:pointer;line-height:1;font-size:15px;padding:0;flex:0 0 auto;
+}
+.railclose:hover{background:#2C3D4F;color:#fff}
+.brand{display:flex;align-items:flex-start;gap:10px}
+.brand .bwrap{flex:1;min-width:0}
 .rail{
   width:var(--rail); flex:0 0 var(--rail); background:var(--ink); color:#C6D2DE;
   position:sticky; top:0; height:100vh; overflow-y:auto; z-index:40;
@@ -189,6 +198,21 @@ tr.tot td{
 tr.tot td:first-child{font-family:var(--f-disp);font-size:15px;letter-spacing:.05em;text-transform:uppercase}
 .calc{background:var(--calc);color:var(--accent);font-weight:500}
 
+/* Money is a symbol glued to a figure. Rendered as one inline-flex unit so the
+   sign can never wrap onto its own line, however narrow the column gets. */
+.money{
+  display:inline-flex;align-items:baseline;gap:.28em;white-space:nowrap;
+  font-family:var(--f-num);font-variant-numeric:tabular-nums;
+}
+.money>i{font-style:normal;opacity:.62;font-size:.86em;flex:0 0 auto}
+.money>b{font-weight:inherit;flex:0 0 auto}
+td .money,th .money{justify-content:flex-end}
+.kpi .money{display:inline-flex;font-size:inherit;letter-spacing:-.01em}
+.kpi .money>i{font-size:.68em;opacity:.55}
+th.n,td.n{text-align:right;white-space:nowrap}
+tr.tot td .money>i,tr.tot td .money>b{opacity:1}
+tr.tot td .money>i{opacity:.7}
+
 input.cell,select.cell,textarea.cell{
   width:100%;border:1px solid transparent;background:var(--input);
   border-bottom:1px solid var(--input-rule);padding:3px 6px;border-radius:2px;
@@ -228,7 +252,7 @@ select.cell{background:var(--input);cursor:pointer}
   display:block;font-family:var(--f-num);font-size:9.5px;letter-spacing:.14em;
   text-transform:uppercase;color:var(--muted);font-weight:600;
 }
-.kpi span{
+.kpi>span{
   display:block;font-family:var(--f-num);font-size:21px;font-weight:600;margin-top:5px;
   font-variant-numeric:tabular-nums;letter-spacing:-.01em;
 }
@@ -251,12 +275,30 @@ select.cell{background:var(--input);cursor:pointer}
 .pill.r{background:#FBEBE9;color:var(--bad)}
 .pill.y{background:var(--signal-wash);color:#7A5A05}
 
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 11px;background:var(--surface-2);
+  border-bottom:1px solid var(--rule)}
+.chip-b{
+  border:1px solid var(--rule);background:#fff;color:var(--ink-3);padding:3px 11px;
+  border-radius:14px;cursor:pointer;font-size:12px;line-height:1.5;white-space:nowrap;
+}
+.chip-b:hover{border-color:var(--accent);color:var(--accent)}
+.chip-b.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+.chip-b .ct{opacity:.6;font-family:var(--f-num);font-size:10.5px;margin-left:5px}
+.chip-b.on .ct{opacity:.8}
+.chip-b.clear{border-style:dashed;color:var(--muted)}
+
 .two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 @media(max-width:1080px){.two{grid-template-columns:1fr}}
 
 /* ── responsive ─────────────────────────────────────── */
 .railtoggle{display:none}
+.railshow{display:none}
+body.rail-off .railshow{display:inline-flex;align-items:center;gap:6px}
 @media(max-width:900px){
+  .railshow,body.rail-off .railshow{display:none}
+  body.rail-off .rail{display:block}
+  body.rail-off{--rail:248px}
+  .railclose{display:none}
   .rail{position:fixed;left:0;top:0;transform:translateX(-100%);transition:transform .22s ease}
   body.nav-open .rail{transform:none;box-shadow:0 0 0 100vmax rgba(22,32,43,.45)}
   .railtoggle{display:inline-flex;align-items:center;gap:6px}
@@ -287,8 +329,12 @@ select.cell{background:var(--input);cursor:pointer}
 <div class="app">
   <nav class="rail" id="rail" aria-label="Modules">
     <div class="brand">
-      <div class="mark">DARK<span>WIZ</span> QS</div>
-      <div class="sub">Quantity Surveying Suite</div>
+      <div class="bwrap">
+        <div class="mark">DARK<span>WIZ</span> QS</div>
+        <div class="sub">Quantity Surveying Suite</div>
+      </div>
+      <button class="railclose noprint" title="Hide the sidebar" aria-label="Hide the sidebar"
+              onclick="App.rail(false)">‹</button>
     </div>
     <div id="nav"></div>
     <div class="railfoot">
@@ -318,6 +364,7 @@ select.cell{background:var(--input);cursor:pointer}
 
     <div class="toolbar noprint">
       <button class="tbtn railtoggle" onclick="document.body.classList.toggle('nav-open')">☰ Modules</button>
+      <button class="tbtn railshow" id="railShow" title="Show the sidebar" onclick="App.rail(true)">☰ Modules</button>
       <div class="tgl"><b>Units</b>
         <div class="seg" id="segUnit">
           <button data-v="metric">Metric</button><button data-v="imperial">Imperial</button>
@@ -382,14 +429,18 @@ const F = {
   n(v,d=2){ if(v===''||v===null||v===undefined||isNaN(v)) return '—';
     return (+v).toLocaleString('en-PH',{minimumFractionDigits:d,maximumFractionDigits:d}); },
   q(v,d=3){ return F.n(v,d); },
-  m(v,d=2){ return U.sym()+' '+F.n(U.money(v),d); },       // v is PHP base
-  mRaw(v,d=2){ return U.sym()+' '+F.n(v,d); },             // v already display
+  /* One inline-flex unit: the sign cannot wrap away from its figure. */
+  wrap(sym,txt){ return '<span class="money"><i>'+sym+'</i><b>'+txt+'</b></span>'; },
+  m(v,d=2){ return F.wrap(U.sym(),F.n(U.money(v),d)); },   // v is PHP base
+  mRaw(v,d=2){ return F.wrap(U.sym(),F.n(v,d)); },         // v already display
+  mPlain(v,d=2){ return U.sym()+' '+F.n(U.money(v),d); },  // for CSV, titles, alerts
   pct(v,d=1){ return F.n(v,d)+'%'; },
-  short(v){ const x=U.money(v); const a=Math.abs(x);
-    if(a>=1e9) return U.sym()+F.n(x/1e9,2)+'B';
-    if(a>=1e6) return U.sym()+F.n(x/1e6,2)+'M';
-    if(a>=1e3) return U.sym()+F.n(x/1e3,1)+'K';
-    return U.sym()+F.n(x,0); },
+  short(v){ const x=U.money(v); const a=Math.abs(x); let t;
+    if(a>=1e9) t=F.n(x/1e9,2)+'B';
+    else if(a>=1e6) t=F.n(x/1e6,2)+'M';
+    else if(a>=1e3) t=F.n(x/1e3,1)+'K';
+    else t=F.n(x,0);
+    return F.wrap(U.sym(),t); },
   esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 };
 const uid = p => p+'_'+Math.random().toString(36).slice(2,8);
@@ -516,6 +567,20 @@ const SEED_PRICES = [
    Detailed Unit Price Analysis workbooks. Labour / equipment / material
    are per one unit of the pay item. Verify against current market. */
 const SEED_DUPA = [
+  ['B.5','Project billboard / signboard','ea','EA',1200.00,0,4800.00],
+  ['B.7(1)','Occupational safety and health programme','l.s.','LS',18000.00,2500.00,26000.00],
+  ['B.7(2)','Personal protective equipment','ea','EA',0,0,1850.00],
+  ['B.9','Mobilisation and demobilisation','l.s.','LS',22000.00,48000.00,12000.00],
+  ['GP-01','Temporary field office and storage','m²','A',1450.00,180.00,3200.00],
+  ['GP-02','Temporary bunkhouse / barracks','m²','A',1250.00,150.00,2800.00],
+  ['GP-03','Temporary water and power service','l.s.','LS',6500.00,0,24000.00],
+  ['GP-04','Temporary fence and site enclosure','m','L',285.00,32.00,690.00],
+  ['GP-05','Site preparation, layout and staking','m²','A',16.00,2.50,4.00],
+  ['GP-06','Surety and performance bond','l.s.','LS',0,0,0],
+  ['GP-07','Contractor\u2019s all-risk insurance (CARI)','l.s.','LS',0,0,0],
+  ['GP-08','Permits, clearances and licences','l.s.','LS',0,0,0],
+  ['GP-09','As-built plans and project documentation','l.s.','LS',14000.00,0,6500.00],
+  ['GP-10','Site clean-up and final turnover','m²','A',22.00,4.50,3.00],
   ['800(1)','Clearing and grubbing','m²','A',6.00,215.55,0],
   ['800(3)a','Individual removal of trees','ea','EA',275.00,1954.47,0],
   ['803(1)a','Structure excavation — common soil','m³','V',12.50,213.30,0],
@@ -540,9 +605,22 @@ const SEED_DUPA = [
   ['1016(1)a','Waterproofing, cement-based','m²','A',120.00,12.00,53.02],
   ['1018(1)','Unglazed / granite / ceramic tile works','m²','A',371.79,37.18,881.28],
   ['1003(1)','Fiber cement board / marine plywood ceiling','m²','A',221.24,22.12,967.60],
+  ['1003(2)','Gypsum board ceiling on metal frame','m²','A',210.00,21.00,845.00],
+  ['1003(3)','Acoustic panel ceiling on T-runner','m²','A',185.00,18.50,720.00],
+  ['1003(4)','PVC ceiling panel','m²','A',195.00,19.50,660.00],
+  ['1051(1)','Drywall partition — gypsum, both faces','m²','A',285.00,28.50,1180.00],
+  ['1051(2)','Drywall partition — fiber cement, both faces','m²','A',298.00,29.80,1265.00],
+  ['1051(3)','Metal furring and stud framing only','m²','A',165.00,16.50,520.00],
+  ['1018(2)','Ceramic tile — wall','m²','A',385.00,38.50,760.00],
+  ['1018(3)','Porcelain / homogeneous tile — floor','m²','A',395.00,39.50,1080.00],
+  ['1018(4)','Tile skirting and trim','m','L',125.00,12.50,190.00],
+  ['1021(1)','Cement floor finish, plain / trowelled','m²','A',148.00,14.80,185.00],
   ['1010(2)a','Hollow-core flush door','m²','A',703.13,70.31,2291.67],
   ['1010(2)b','Wooden panel door, heavy-duty','m²','A',763.89,76.39,3142.86],
   ['1043(1)','PVC door and frame','m²','A',714.29,71.43,2083.33],
+  ['1010(1)','Steel door and frame, painted','m²','A',780.00,78.00,3850.00],
+  ['1010(3)','Door hardware — lockset, hinges and closer','set','EA',420.00,0,1850.00],
+  ['1012(1)','Aluminium framed door with glass','m²','A',687.50,68.75,4200.00],
   ['1032(1)a','Painting works — masonry, primer and two coats','m²','A',142.86,0,144.74],
   ['1032(1)b','Painting works — wood, primer and two coats','m²','A',150.00,0,320.00],
   ['1032(1)c','Painting works — metal, red oxide and QDE','m²','A',150.00,0,498.03],
@@ -556,6 +634,21 @@ const SEED_DUPA = [
   ['SPL-G1','Tempered glass partition, 12 mm, with fittings','m²','A',850.00,85.00,5600.00],
   ['SPL-G2','Glass railing with stainless fittings','m','L',1250.00,125.00,7800.00],
   ['SPL-G3','Mirror or glass cladding on backing','m²','A',562.50,56.25,1450.00],
+  ['SPL-A1','Stainless steel railing and balusters','m','L',1450.00,145.00,4800.00],
+  ['SPL-A2','Wrought iron / steel railing, painted','m','L',980.00,98.00,2650.00],
+  ['SPL-A3','Wall cladding — stone or PVC on backing','m²','A',385.00,38.50,1720.00],
+  ['SPL-A4','Decorative wall panel or feature finish','m²','A',420.00,42.00,1950.00],
+  ['SPL-A5','Signage, sticker and vinyl graphics','m²','A',350.00,0,1250.00],
+  ['SPL-A6','Wallpaper application','m²','A',185.00,0,1080.00],
+  ['SPL-A7','Cabinetry and built-in millwork','m','L',2400.00,240.00,7800.00],
+  ['SPL-A8','Cornice, moulding and trim works','m','L',165.00,16.50,420.00],
+  ['SPL-E1','Waterproofing — liquid membrane system','m²','A',148.00,14.80,395.00],
+  ['SPL-E2','Thermal or acoustic insulation','m²','A',95.00,9.50,320.00],
+  ['SPL-E3','Expansion joint and sealant treatment','m','L',225.00,22.50,580.00],
+  ['SPL-E4','Epoxy grouting and concrete repair','m','L',380.00,38.00,720.00],
+  ['SPL-E5','Termite and soil poisoning treatment','m²','A',18.00,1.80,42.00],
+  ['SPL-E6','Anti-corrosion coating on embedded steel','m²','A',165.00,16.50,455.00],
+  ['SPL-E7','Structural crack injection','m','L',420.00,42.00,860.00],
   ['1047(1)','Structural steel — miscellaneous roof framing','kg','M',7.50,12.00,105.00],
   ['SPL-R1','Sagrods, turnbuckles and cross bracing','kg','M',6.80,9.50,118.00],
   ['SPL-R2','Steel deck / ceiling joist framing','kg','M',6.20,8.40,98.00],
@@ -668,22 +761,30 @@ const MEAS = {
 };
 
 const DEFAULT_SCOPES = [
+  {id:'genprep',code:'B / GP',   name:'General preparation',
+   note:'Everything before a shovel moves — mobilisation, bonds and insurances, permits, temporary facilities, safety programme, signboards and final clean-up.'},
   {id:'earth', code:'800-804',  name:'Earthworks',
    note:'Clearing, structure excavation, backfill, gravel bedding and soil poisoning. Set the measurement mode per line.'},
-  {id:'conc',  code:'900',      name:'Concrete',
+  {id:'conc',  code:'900',      name:'Concreting Works',
    note:'Volumes by structural element. Link each line to a mix class so the bill of materials can explode cement, sand and gravel.'},
   {id:'form',  code:'903',      name:'Formworks & scaffolding',
    note:'Contact area of forms plus falsework. The reuse factor lives in the material coefficient set, not here.'},
   {id:'mas',   code:'1046-1027',name:'Masonry & plaster',
    note:'Wall areas by CHB thickness. Deduct openings as negative lines or with the factor column.'},
-  {id:'arch',  code:'1003-1018',name:'Architectural finishes',
-   note:'Ceiling, drywall, tiling, waterproofing and door works. Painting and glazing have their own sheets.'},
+  {id:'roof',  code:'1013-1047',name:'Roofing Works',
+   note:'Roof sheets and accessories together with the framing that carries them — trusses, purlins, sagrods and bracing, scheduled by member on this sheet.'},
+  {id:'dryceil',code:'1003-1051',name:'Drywall and ceiling works',
+   note:'Suspended and applied ceilings, drywall partitions, and the metal furring or stud framing behind them.'},
+  {id:'tile',  code:'1018-1021',name:'Tiling works',
+   note:'Floor and wall tiling, skirting and trim, and cement floor finishes.'},
+  {id:'glass', code:'1008-1043',name:'Windows, glass and doors',
+   note:'Every opening — aluminium and analok windows, fixed and tempered glass, glass railings, mirrors, and all door types with their hardware.'},
   {id:'paint', code:'1032',     name:'Painting works',
    note:'Every painting pay item — masonry, wood, metal, epoxy floor coating, surface preparation and textured finishes.'},
-  {id:'glass', code:'1008-1009',name:'Glass works',
-   note:'Aluminium framed windows and doors, fixed glass, tempered partitions, glass railings and mirror cladding.'},
-  {id:'roof',  code:'1013-1014',name:'Roofing',
-   note:'Roof sheet area on the slope, plus accessories measured in linear metres. Framing steel goes on the roof framing schedule.'},
+  {id:'arch',  code:'SPL-A',    name:'Architectural finishes',
+   note:'Applied and decorative work — railings and balusters, cladding, feature panels, signage and stickers, wallpaper, cabinetry, cornices and trim.'},
+  {id:'engfin',code:'SPL-E',    name:'Engineering finishes',
+   note:'Remedial and protective solutions — waterproofing systems, insulation, expansion joints, epoxy grouting, crack injection, anti-corrosion coating and soil treatment.'},
   {id:'plumb', code:'1001-1002',name:'Plumbing works',
    note:'Sanitary and waterline runs, fixtures, fittings and sanitary accessories.'},
   {id:'elec',  code:'1100-1103',name:'Electrical works',
@@ -693,6 +794,21 @@ const DEFAULT_SCOPES = [
 ];
 
 const DEF_ROWS = {
+  genprep:[
+    ['Mobilisation and demobilisation','B.9','LS',0,0,0,1,1],
+    ['Project billboard','B.5','EA',0,0,0,2,1],
+    ['Occupational safety and health programme','B.7(1)','LS',0,0,0,1,1],
+    ['Personal protective equipment','B.7(2)','EA',0,0,0,24,1],
+    ['Temporary field office and storage','GP-01','A',6.0,4.0,0,1,1],
+    ['Temporary bunkhouse','GP-02','A',8.0,4.0,0,1,1],
+    ['Temporary water and power service','GP-03','LS',0,0,0,1,1],
+    ['Temporary fence and site enclosure','GP-04','L',70,0,0,1,1],
+    ['Site preparation, layout and staking','GP-05','A',20,15,0,1,1],
+    ['Surety and performance bond','GP-06','LS',0,0,0,1,1],
+    ['Contractor\u2019s all-risk insurance','GP-07','LS',0,0,0,1,1],
+    ['Permits and clearances','GP-08','LS',0,0,0,1,1],
+    ['As-built plans and documentation','GP-09','LS',0,0,0,1,1],
+    ['Site clean-up and final turnover','GP-10','A',20,15,0,1,1]],
   earth:[
     ['Clearing and grubbing','800(1)','A',20,15,0,1,1],
     ['Structure excavation — footings','803(1)a','V',1.8,1.8,1.5,12,1.1],
@@ -713,12 +829,36 @@ const DEF_ROWS = {
     ['Interior partition — CHB 100 mm','1046(1)','A',48,3.0,0,1,1],
     ['Deduct door and window openings','1046(1)','A',-2.1,2.4,0,6,1],
     ['Cement plaster finish, both faces','1027(1)','A',118,3.0,0,2,1]],
-  arch:[
+  roof:[
+    ['Pre-painted rib-type roofing','1014(2)','A',21,8.5,0,2,1.10],
+    ['Ridge roll','1013(2)a','L',21,0,0,1,1.05],
+    ['Gutter','1013(2)b','L',21,0,0,2,1.05],
+    ['Top chord — tubular 2x3x1.5, 14 @ 6.40 m','1047(2)b','M',0,0,0,460.5,1.05],
+    ['Bottom chord — tubular 2x3x1.5, 7 @ 8.00 m','1047(2)b','M',0,0,0,287.8,1.05],
+    ['Web members — tubular 2x2x1.2, 84 @ 1.20 m','1047(2)b','M',0,0,0,338.7,1.05],
+    ['C-purlins 2x4x1.5, 60 @ 6.00 m','1047(2)c','M',0,0,0,1764.0,1.05],
+    ['Sagrod 10 mmØ with turnbuckle, 96 @ 1.20 m','SPL-R1','M',0,0,0,71.0,1.05],
+    ['Gable and eave bracing','1047(1)','M',0,0,0,129.0,1.05]],
+  dryceil:[
     ['Ceiling — fiber cement board','1003(1)','A',20,15,0,1,1.05],
-    ['Floor tile 600 x 600','1018(1)','A',20,15,0,1,1.08],
-    ['Waterproofing — toilet and balcony','1016(1)a','A',3.2,2.4,0,5,1.05],
+    ['Ceiling — gypsum board, dry areas','1003(2)','A',12,8,0,1,1.05],
+    ['Drywall partition — gypsum, both faces','1051(1)','A',24,3.0,0,1,1.05],
+    ['Drywall partition — fiber cement, wet areas','1051(2)','A',9.6,3.0,0,1,1.05]],
+  tile:[
+    ['Floor tile 600 x 600','1018(3)','A',20,15,0,1,1.08],
+    ['Wall tile — toilet and kitchen','1018(2)','A',3.2,2.4,0,5,1.08],
+    ['Tile skirting','1018(4)','L',86,0,0,1,1.05],
+    ['Cement floor finish — service area','1021(1)','A',4.0,3.0,0,1,1.05]],
+  glass:[
+    ['Analok sliding window, 1.50 x 1.20','SPL-01','A',1.50,1.20,0,8,1],
+    ['Aluminium framed sliding window, 1.20 x 1.20','1008(1)','A',1.20,1.20,0,6,1],
+    ['Aluminium framed glass door, 1.80 x 2.10','1008(2)','A',1.80,2.10,0,1,1],
+    ['Fixed glass panel — stairwell','1009(1)','A',1.20,2.40,0,2,1],
+    ['Glass railing — balcony','SPL-G2','L',6.0,0,0,2,1],
+    ['Mirror on toilet backing','SPL-G3','A',0.80,1.00,0,4,1],
     ['Hollow-core flush door, 0.90 x 2.10','1010(2)a','A',0.90,2.10,0,6,1],
-    ['PVC door, 0.70 x 2.10 — toilets','1043(1)','A',0.70,2.10,0,4,1]],
+    ['PVC door, 0.70 x 2.10 — toilets','1043(1)','A',0.70,2.10,0,4,1],
+    ['Door hardware set','1010(3)','EA',0,0,0,10,1]],
   paint:[
     ['Surface preparation — skim coat and putty','1032(2)','A',118,3.0,0,2,1],
     ['Painting — interior masonry','1032(1)a','A',118,3.0,0,2,1],
@@ -726,17 +866,17 @@ const DEF_ROWS = {
     ['Painting — ceiling','1032(1)a','A',20,15,0,1,1],
     ['Painting — wood, doors and jambs','1032(1)b','A',0.90,2.10,0,12,1],
     ['Painting — metal, railings and grilles','1032(1)c','A',24,1.1,0,1,1]],
-  glass:[
-    ['Analok sliding window, 1.50 x 1.20','SPL-01','A',1.50,1.20,0,8,1],
-    ['Aluminium framed sliding window, 1.20 x 1.20','1008(1)','A',1.20,1.20,0,6,1],
-    ['Aluminium framed glass door, 1.80 x 2.10','1008(2)','A',1.80,2.10,0,1,1],
-    ['Fixed glass panel — stairwell','1009(1)','A',1.20,2.40,0,2,1],
-    ['Glass railing — balcony','SPL-G2','L',6.0,0,0,2,1],
-    ['Mirror on toilet backing','SPL-G3','A',0.80,1.00,0,4,1]],
-  roof:[
-    ['Pre-painted rib-type roofing','1014(2)','A',21,8.5,0,2,1.10],
-    ['Ridge roll','1013(2)a','L',21,0,0,1,1.05],
-    ['Gutter','1013(2)b','L',21,0,0,2,1.05]],
+  arch:[
+    ['Stainless railing — stairs and balcony','SPL-A1','L',12,0,0,1,1],
+    ['Stone cladding — feature wall','SPL-A3','A',4.0,3.0,0,1,1.05],
+    ['Cornice and moulding trim','SPL-A8','L',86,0,0,1,1.05],
+    ['Signage and vinyl graphics','SPL-A5','A',1.2,0.6,0,3,1],
+    ['Kitchen cabinetry and millwork','SPL-A7','L',4.5,0,0,1,1]],
+  engfin:[
+    ['Waterproofing — cement based, toilets','1016(1)a','A',3.2,2.4,0,5,1.05],
+    ['Waterproofing — liquid membrane, roof deck','SPL-E1','A',20,15,0,1,1.05],
+    ['Expansion joint and sealant treatment','SPL-E3','L',30,0,0,1,1],
+    ['Termite and soil poisoning treatment','SPL-E5','A',20,15,0,1,1]],
   plumb:[
     ['Sanitary PVC pipe 100 mmØ','1001(1)a','L',6,0,0,14,1.05],
     ['Waterline pipes and fittings','1002(6)','LS',0,0,0,1,1],
@@ -763,8 +903,9 @@ const DEF_ROWS = {
 const BASIS_MAP = {
   '900(1)c2':'conc_A','900(1)':'conc_A','903(2)':'form_ply',
   '1046(1)':'chb100','1046(2)':'chb150','1027(1)':'plaster',
-  '1018(1)':'tile600','1003(1)':'ceil_fcb','1032(1)a':'paint_mas',
-  '1014(2)':'roof_rib','1014(1)':'roof_rib'
+  '1018(1)':'tile600','1018(2)':'tile600','1018(3)':'tile600',
+  '1003(1)':'ceil_fcb','1003(2)':'ceil_fcb','1051(1)':'dry_gyp','1051(2)':'dry_gyp',
+  '1032(1)a':'paint_mas','1014(2)':'roof_rib','1014(1)':'roof_rib'
 };
 
 function seedState(){
@@ -787,7 +928,8 @@ function seedState(){
     cfg:{ units:'metric', currency:'PHP', fx:58.50, ocm:9, profit:8, vat:5,
           contingency:0, mode:'dupa' },
     ui:{ qtoBy:'item', qtoQ:'', qtoSort:'item', qtoDir:'asc', qtoSrc:'',
-         bomQ:'', bomSort:'amt', bomDir:'desc', dupaQ:'', priceQ:'', newCat:null, _focus:null },
+         bomQ:'', bomSort:'amt', bomDir:'desc', dupaQ:'', priceQ:'', priceCats:[],
+         rail:true, newCat:null, _focus:null },
     scopes, prices, dupa, coef:JSON.parse(JSON.stringify(SEED_COEF)), take,
     rebar:[
       {id:uid('r'),el:'Footing F-1',pay:'',gr:'40',d:16,len:1.70,nb:8,n:12,lap:1.05},
@@ -796,14 +938,6 @@ function seedState(){
       {id:uid('r'),el:'Beam B-1 main bars',pay:'',gr:'60',d:16,len:4.20,nb:6,n:24,lap:1.08},
       {id:uid('r'),el:'Beam B-1 stirrups',pay:'',gr:'33',d:10,len:1.50,nb:18,n:24,lap:1.05},
       {id:uid('r'),el:'Slab bars, both ways',pay:'',gr:'40',d:12,len:5.00,nb:120,n:2,lap:1.05}
-    ],
-    steel:[
-      {id:uid('s'),mem:'Top chord — tubular 2x3x1.5',pay:'1047(2)b',kgm:5.14,len:6.40,n:14,f:1.05},
-      {id:uid('s'),mem:'Bottom chord — tubular 2x3x1.5',pay:'1047(2)b',kgm:5.14,len:8.00,n:7,f:1.05},
-      {id:uid('s'),mem:'Web members — tubular 2x2x1.2',pay:'1047(2)b',kgm:3.36,len:1.20,n:84,f:1.05},
-      {id:uid('s'),mem:'C-purlins 2x4x1.5',pay:'1047(2)c',kgm:4.90,len:6.00,n:60,f:1.05},
-      {id:uid('s'),mem:'Sagrod 10 mmØ with turnbuckle',pay:'SPL-R1',kgm:0.616,len:1.20,n:96,f:1.05},
-      {id:uid('s'),mem:'Gable and eave bracing',pay:'1047(1)',kgm:3.36,len:2.40,n:16,f:1.05}
     ],
     mix:{ cem:1, sand:2, grav:4, vol:10, wc:0.53, dry:1.75, waste:5 },
     cc:[
@@ -825,41 +959,108 @@ function seedState(){
 }
 
 /* Bring a file or a stored state written by an earlier version up to date. */
+const RE_ELEC   = /^11\d\d/;
+const RE_CEIL   = /^(1003|1051)/;
+const RE_TILE   = /^(1018|1021)/;
+const RE_OPEN   = /^(1008|1009|1010|1012|1043)|^SPL-(01|G\d)/;
+const RE_ENGFIN = /^(1016)|^SPL-E\d/;
+const RE_ROOFST = /^1047|^SPL-R\d/;
+
+function reroute(o){
+  /* Pull lines out of whichever sheet they sit on and re-file them by pay item.
+     Only moves a line when its pay item clearly belongs elsewhere, so anything
+     the person has customised on a sheet of their own is left alone. */
+  const rules=[
+    ['dryceil',RE_CEIL], ['tile',RE_TILE], ['glass',RE_OPEN],
+    ['engfin',RE_ENGFIN], ['roof',RE_ROOFST], ['elec',RE_ELEC]
+  ];
+  const from=['arch','mep','roof','glass','dryceil','tile','engfin','plumb'];
+  from.forEach(src=>{
+    const list=o.take[src]; if(!Array.isArray(list)) return;
+    for(let i=list.length-1;i>=0;i--){
+      const pay=String(list[i].pay||'');
+      const hit=rules.find(([dest,re])=>dest!==src && re.test(pay));
+      if(hit){ (o.take[hit[0]]=o.take[hit[0]]||[]).unshift(list.splice(i,1)[0]); }
+    }
+  });
+}
+
 function migrate(o){
   if(!o || !o.meta || !o.take) return null;
   o.ui = Object.assign({qtoBy:'item',qtoQ:'',qtoSort:'item',qtoDir:'asc',qtoSrc:'',
-                        bomQ:'',bomSort:'amt',bomDir:'desc',dupaQ:'',priceQ:'',
-                        newCat:null,_focus:null}, o.ui||{});
+                        bomQ:'',bomSort:'amt',bomDir:'desc',dupaQ:'',priceQ:'',priceCats:[],
+                        rail:true,newCat:null,_focus:null}, o.ui||{});
+  if(!Array.isArray(o.ui.priceCats)) o.ui.priceCats=[];
+  if(typeof o.ui.rail!=='boolean') o.ui.rail=true;
   if(!Array.isArray(o.scopes)) o.scopes = JSON.parse(JSON.stringify(DEFAULT_SCOPES));
-  /* the old combined plumbing-and-electrical sheet splits in two */
+
+  /* pay items added after earlier releases */
+  const have=new Set((o.dupa||[]).map(d=>d.item));
+  SEED_DUPA.forEach(d=>{ if(!have.has(d[0]))
+    o.dupa.push({id:uid('d'),item:d[0],desc:d[1],unit:d[2],dim:d[3],lab:d[4],eqp:d[5],mat:d[6],on:true}); });
+
+  /* v1: the combined plumbing-and-electrical sheet splits in two */
   if(o.take.mep){
-    const isElec = r => /^11\d\d/.test(String(r.pay||'')) || /electric|conduit|outlet|lighting|panel|wire/i.test(r.desc||'');
+    const isElec = r => RE_ELEC.test(String(r.pay||'')) || /electric|conduit|outlet|lighting|panel|wire/i.test(r.desc||'');
     o.take.plumb = (o.take.plumb||[]).concat(o.take.mep.filter(r=>!isElec(r)));
     o.take.elec  = (o.take.elec ||[]).concat(o.take.mep.filter(isElec));
     delete o.take.mep;
     o.scopes = o.scopes.filter(s=>s.id!=='mep');
   }
-  DEFAULT_SCOPES.forEach((d,i)=>{ if(!o.scopes.some(s=>s.id===d.id)) o.scopes.splice(i,0,{...d}); });
+
+  /* make sure every built-in sheet exists, in the current order */
+  DEFAULT_SCOPES.forEach((d,i)=>{
+    const ex=o.scopes.find(s=>s.id===d.id);
+    if(!ex) o.scopes.splice(i,0,{...d});
+    else if(!ex.custom && ex.name===ex._seedName) ex.name=d.name;   /* untouched name follows the rename */
+  });
+  /* apply the renames for anyone who never edited the sheet name */
+  const RENAMED={conc:['Concrete','Concreting Works'],
+                 glass:['Glass works','Windows, glass and doors'],
+                 roof:['Roofing','Roofing Works']};
+  Object.entries(RENAMED).forEach(([id,[was,now]])=>{
+    const sc=o.scopes.find(s=>s.id===id); if(sc && sc.name===was) sc.name=now;
+  });
+  /* built-in sheets take the current note and code; custom ones keep theirs */
+  o.scopes.forEach(sc=>{
+    const d=DEFAULT_SCOPES.find(x=>x.id===sc.id);
+    if(d && !sc.custom){ sc.note=d.note; if(!sc.code||sc.code===d.code) sc.code=d.code; }
+  });
+  /* built-ins first, in canonical order, then custom sheets in their own order */
+  const order=DEFAULT_SCOPES.map(d=>d.id);
+  o.scopes.sort((x,y)=>{
+    const i=order.indexOf(x.id), j=order.indexOf(y.id);
+    if(i<0&&j<0) return 0; if(i<0) return 1; if(j<0) return -1; return i-j;
+  });
   o.scopes.forEach(s=>{ if(!Array.isArray(o.take[s.id])) o.take[s.id]=[]; });
-  /* pay items on the schedules, and bar grades */
+
+  /* v2: the roof framing schedule folds into the roofing sheet as measured lines */
+  if(Array.isArray(o.steel) && o.steel.length){
+    o.take.roof = o.take.roof||[];
+    o.steel.forEach(r=>{
+      const pay = r.pay || (/purlin/i.test(r.mem)?'1047(2)c'
+                          : /sagrod|turnbuckle|brac/i.test(r.mem)?'SPL-R1':'1047(2)b');
+      o.take.roof.push({id:uid('t'),desc:r.mem,pay,mode:'M',l:0,w:0,h:0,
+        n:(+r.kgm||0)*(+r.len||0)*(+r.n||0), f:(+r.f||1), basis:''});
+    });
+  }
+  delete o.steel;
+
+  /* re-file lines that now belong on a different sheet */
+  reroute(o);
+
   (o.rebar||[]).forEach(r=>{ if(r.pay===undefined) r.pay=''; if(!r.gr) r.gr = r.d>=16?'60':'40'; });
-  (o.steel||[]).forEach(r=>{ if(!r.pay) r.pay = /purlin/i.test(r.mem)?'1047(2)c'
-                                              : /sagrod|turnbuckle|brac/i.test(r.mem)?'SPL-R1':'1047(2)b'; });
-  /* pay items added after the first release */
-  const have=new Set((o.dupa||[]).map(d=>d.item));
-  SEED_DUPA.forEach(d=>{ if(!have.has(d[0]))
-    o.dupa.push({id:uid('d'),item:d[0],desc:d[1],unit:d[2],dim:d[3],lab:d[4],eqp:d[5],mat:d[6],on:true}); });
   o.bill = Object.assign({no:1,from:'',to:'',ret:10,adv:15,advOn:true,prev:{},now:{}}, o.bill||{});
   return o;
 }
 
 let S = (function(){
-  for(const k of ['darkwiz_qs_v2','pndsyn_qs_v1']){
+  for(const k of ['darkwiz_qs_v3','darkwiz_qs_v2','pndsyn_qs_v1']){
     try{ const raw=Store.get(k); if(raw){ const o=migrate(JSON.parse(raw)); if(o) return o; } }catch(e){}
   }
   return seedState();
 })();
-const persist = () => { try{ Store.set('darkwiz_qs_v2', JSON.stringify(S)); }catch(e){} };
+const persist = () => { try{ Store.set('darkwiz_qs_v3', JSON.stringify(S)); }catch(e){} };
 
 /* ── 6. Derived calculations ───────────────────────────────── */
 const Calc = {
@@ -886,7 +1087,6 @@ const Calc = {
   rebarKg(r){ const w=(REBAR.find(x=>x.d==r.d)||{w:0}).w;
     return (+r.len||0)*(+r.nb||0)*(+r.n||0)*(+r.lap||1)*w; },
   rebarPay(r){ return r.pay || ((+S.meta.storeys>1)?'902(1)b':'902(1)a'); },
-  steelKg(r){ return (+r.kgm||0)*(+r.len||0)*(+r.n||0)*(+r.f||1); },
 
   /* every measured line, before any consolidation */
   qtoLines(){
@@ -898,8 +1098,6 @@ const Calc = {
     }));
     S.rebar.forEach(r=>out.push({sheet:'Rebar schedule',sheetId:'rebar',item:Calc.rebarPay(r),
       desc:r.el+' — '+r.d+' mmØ Grade '+r.gr,qty:Calc.rebarKg(r),dim:'M'}));
-    S.steel.forEach(r=>out.push({sheet:'Roof framing',sheetId:'steel',item:r.pay||'1047(2)b',
-      desc:r.mem,qty:Calc.steelKg(r),dim:'M'}));
     return out;
   },
   qto(){
@@ -945,10 +1143,11 @@ const Calc = {
       out.set('Reinforcing steel (by weight)',{name:'Reinforcing steel (by weight)',unit:'kg',
         cat:p?p.cat:'Reinforcement',rate:p?p.rate:0,
         qty:(out.get('Reinforcing steel (by weight)')?.qty||0)+rk,from:new Set(['Rebar schedule'])}); }
-    const sk=S.steel.reduce((a,r)=>a+Calc.steelKg(r),0);
+    const sk=(S.take.roof||[]).filter(r=>RE_ROOFST.test(String(r.pay||'')))
+              .reduce((a,r)=>a+Calc.rowQty(r),0);
     if(sk){ const p=S.prices.find(x=>x.name==='Structural steel (fabricated, by weight)');
       out.set('Structural steel (fabricated, by weight)',{name:'Structural steel (fabricated, by weight)',
-        unit:'kg',cat:p?p.cat:'Structural steel',rate:p?p.rate:0,qty:sk,from:new Set(['Roof framing'])}); }
+        unit:'kg',cat:p?p.cat:'Structural steel',rate:p?p.rate:0,qty:sk,from:new Set(['Roofing Works'])}); }
     return [...out.values()].map(x=>({...x,amt:x.qty*x.rate}));
   }
 };
@@ -966,16 +1165,14 @@ function modules(){
     note:'Proportion-by-volume method against DPWH classes, with the absolute-volume check and wastage allowance.'},
    ...S.scopes.map((s,i)=>({id:'tk_'+s.id, code:'T'+(i+1), grp:'Take-off',
      name:s.name, note:s.note, scope:s.id})),
-   {id:'rebar', code:'S1', grp:'Take-off', name:'Rebar schedule',
-    note:'Bar schedule by element and grade. Weights follow the PNS 49 unit mass table adopted in NSCP 2015.'},
-   {id:'steel', code:'S2', grp:'Take-off', name:'Roof framing',
-    note:'Trusses, purlins, sagrods and bracing by member length and unit mass, each assigned to its own roof framing pay item.'},
    {id:'qto',   code:'A1', grp:'Analysis', name:'Quantity take-off summary',
     note:'Every measured line, consolidated the way you want to read it — by pay item, by sheet, by unit, or line by line.'},
    {id:'bom',   code:'A2', grp:'Analysis', name:'Bill of materials',
     note:'Take-off quantities exploded into purchasable materials through the coefficient sets.'},
    {id:'dupa',  code:'A3', grp:'Analysis', name:'Detailed unit price analysis',
     note:'Labour, equipment and material per unit of each pay item, plus the mark-up build-up to the unit bid price.'},
+   {id:'rebar', code:'A4', grp:'Analysis', name:'Rebar schedule',
+    note:'Bar schedule by element and grade, with the procurement split by grade. Weights follow the PNS 49 unit mass table adopted in NSCP 2015.'},
    {id:'boq',   code:'B1', grp:'Output', name:'Bill of quantities',
     note:'Quantity × unit bid price by pay item, rolling up to the approved budget for the contract.'},
    {id:'cc',    code:'B2', grp:'Output', name:'Cost control',
@@ -1031,12 +1228,16 @@ function kpi(list){
 const payOpts = () => [['','— select pay item —'],...S.dupa.map(d=>[d.item, d.item+'  '+d.desc])];
 const coefOpts = () => [['','— none —'],...S.coef.map(c=>[c.id,c.name])];
 const modeOpts = () => Object.entries(MEAS).map(([k,v])=>[k,v.lbl]);
-const categories = () => [...new Set(S.prices.map(p=>p.cat))].sort((a,b)=>a.localeCompare(b));
+/* Real categories only — a blank is a material waiting to be filed, not a group. */
+const categories = () => [...new Set(S.prices.map(p=>String(p.cat||'').trim()).filter(Boolean))]
+  .sort((a,b)=>a.localeCompare(b));
 function catCell(p){
   if(S.ui.newCat===p.id)
     return `<input class="cell" id="newcat_${p.id}" placeholder="Name the new category"
       onchange="App.setCat('${p.id}',this.value)">`;
+  const known=categories().includes(p.cat);
   return `<select class="cell" onchange="App.catPick('${p.id}',this.value)">`+
+    (known?'':`<option value="" selected>— choose a category —</option>`)+
     categories().map(c=>`<option value="${F.esc(c)}" ${c===p.cat?'selected':''}>${F.esc(c)}</option>`).join('')+
     `<option value="__new__">＋ New category…</option></select>`;
 }
@@ -1126,30 +1327,56 @@ V.setup = () => {
 
 V.prices = () => {
   const q=(S.ui.priceQ||'').toLowerCase();
-  const hit = p => !q || (p.name+' '+p.cat+' '+p.unit).toLowerCase().includes(q);
+  const picked=new Set(S.ui.priceCats||[]);
   const cats=categories();
+  const countOf = c => S.prices.filter(p=>p.cat===c).length;
+  const hit = p => (!q || (p.name+' '+p.cat+' '+p.unit).toLowerCase().includes(q))
+                && (!picked.size || picked.has(p.cat));
+
+  const chips = `<div class="chips noprint">
+    <button class="chip-b ${picked.size?'':'on'}" onclick="App.catFilter('__all__')">All categories<span class="ct">${S.prices.length}</span></button>
+    ${cats.map(c=>`<button class="chip-b ${picked.has(c)?'on':''}" onclick="App.catFilter('${F.esc(c).replace(/'/g,"&#39;")}')">${F.esc(c)}<span class="ct">${countOf(c)}</span></button>`).join('')}
+    ${picked.size?`<button class="chip-b clear" onclick="App.catFilter('__all__')">Clear ${picked.size} filter${picked.size>1?'s':''}</button>`:''}
+  </div>`;
+
   let rows='', shown=0;
   cats.forEach(c=>{
     const list=S.prices.filter(p=>p.cat===c && hit(p));
     if(!list.length) return;
     rows+=`<tr class="grp"><td colspan="5">${F.esc(c)} <span style="opacity:.6;font-weight:400">· ${list.length} item${list.length>1?'s':''}</span></td></tr>`;
     list.forEach(p=>{ shown++;
-      rows+=`<tr>
-        <td style="min-width:260px">${inp('prices',p.id,'name','text')}</td>
-        <td style="width:90px">${inp('prices',p.id,'unit','text')}</td>
-        <td style="width:190px">${catCell(p)}</td>
-        <td class="n" style="width:140px">${inp('prices',p.id,'rate','money')}</td>
+      const fresh = p.cat==='' || p.name==='';
+      rows+=`<tr${fresh?' style="background:var(--signal-wash)"':''}>
+        <td style="min-width:260px">${inp('prices',p.id,'name','text',fresh?'placeholder="Name the material" autofocus':'')}</td>
+        <td style="width:90px">${inp('prices',p.id,'unit','text',fresh?'placeholder="unit"':'')}</td>
+        <td style="width:200px">${catCell(p)}</td>
+        <td class="n" style="width:150px">${inp('prices',p.id,'rate','money')}</td>
         <td class="c" style="width:44px">${del('prices',p.id)}</td></tr>`;
     });
   });
-  return card('Material price list','Rates in '+U.cur(),
+  /* materials with no category yet sit at the bottom, ready to be filled in */
+  const loose=S.prices.filter(p=>!String(p.cat||'').trim());
+  if(loose.length && !picked.size){
+    rows+=`<tr class="grp" style="background:var(--signal);color:#1B1405"><td colspan="5">Uncategorised — choose a category for each</td></tr>`;
+    loose.forEach(p=>{ shown++;
+      rows+=`<tr style="background:var(--signal-wash)">
+        <td style="min-width:260px">${inp('prices',p.id,'name','text','placeholder="Name the material"')}</td>
+        <td style="width:90px">${inp('prices',p.id,'unit','text','placeholder="unit"')}</td>
+        <td style="width:200px">${catCell(p)}</td>
+        <td class="n" style="width:150px">${inp('prices',p.id,'rate','money')}</td>
+        <td class="c" style="width:44px">${del('prices',p.id)}</td></tr>`;
+    });
+  }
+
+  return card('Material database','Rates in '+U.cur(),
     `<div class="pad" style="padding-bottom:0"><p class="hint">Rates are stored in peso. Editing a rate while the display is set to dollars converts it back at the toolbar exchange rate, so the peso figure stays the source of truth. Category is a picker rather than free text — a mistyped category would silently split a group in two, so choose an existing one or add a new one deliberately.</p></div>
      ${searchBar('prices','priceQ','Search materials, categories or units…',
        `<span style="font-size:12px;color:var(--muted)">${shown} of ${S.prices.length} materials · ${cats.length} categories</span>`)}
+     ${chips}
      <div class="tw"><table><thead><tr><th>Material</th><th>Unit</th><th>Category</th><th class="n">Unit rate (${U.sym()})</th><th></th></tr></thead>
-     <tbody>${rows||'<tr><td colspan="5" style="padding:22px;text-align:center;color:var(--muted)">Nothing matches that search.</td></tr>'}</tbody></table></div>`,
+     <tbody>${rows||'<tr><td colspan="5" style="padding:22px;text-align:center;color:var(--muted)">Nothing matches that search or filter.</td></tr>'}</tbody></table></div>`,
     `<button class="btn pri" onclick="App.add('prices')">Add material</button>
-     <span style="align-self:center;font-size:12px;color:var(--muted)">New materials land in the category you last used.</span>`);
+     <span style="align-self:center;font-size:12px;color:var(--muted)">New rows land at the bottom, blank, for you to name and categorise.</span>`);
 };
 
 V.coef = () => {
@@ -1361,53 +1588,6 @@ V.rebar = () => {
         <td style="font-size:12px;color:var(--muted)">${g.use}</td></tr>`).join('')}
      </tbody></table></div>
      <div class="pad"><div class="note"><b>Grade 33 is not interchangeable.</b> Philippine mills still sell 10 mm and 12 mm bar as Grade 230, and it is fine for ties and slab bars in ordinary construction — but NSCP 2015 §421 bars it from members resisting earthquake forces, where the drawings will call for Grade 415. If a bar list came in without a grade, check the schedule before you price it: the difference is roughly ₱2 to ₱4 a kilo, and substituting downward is a structural defect, not a saving.</div></div>`)}`;
-};
-
-/* ── roof framing schedule ─────────────────────────────────── */
-V.steel = () => {
-  let kg=0; const byPay={};
-  const body=S.steel.map(r=>{
-    const k=Calc.steelKg(r); kg+=k;
-    const p=r.pay||'1047(2)b'; byPay[p]=(byPay[p]||0)+k;
-    const pcs=(+r.len||0)*(+r.n||0)*(+r.f||1)/6;
-    const d=Calc.dupa(p), b=d?Calc.dupaBid(d):null;
-    return `<tr><td style="min-width:250px">${inp('steel',r.id,'mem','text')}</td>
-      <td style="min-width:190px">${sel('steel',r.id,'pay',payOpts())}</td>
-      <td class="n" style="width:110px">${inp('steel',r.id,'kgm','num')}</td>
-      <td class="n" style="width:105px">${inp('steel',r.id,'len','len')}</td>
-      <td class="n" style="width:88px">${inp('steel',r.id,'n','num')}</td>
-      <td class="n" style="width:88px">${inp('steel',r.id,'f','num')}</td>
-      <td class="n num calc" style="width:115px">${F.n(U.out(k,'M'),2)}</td>
-      <td class="n num" style="width:100px">${F.n(pcs,1)}</td>
-      <td class="n num" style="width:125px">${b?F.m(k*b.bid):'<span class="pill y">no rate</span>'}</td>
-      <td class="c">${del('steel',r.id)}</td></tr>`;
-  }).join('');
-  const split=Object.entries(byPay).map(([p,k])=>{
-    const d=Calc.dupa(p), b=d?Calc.dupaBid(d):null;
-    return `<tr><td class="num">${F.esc(p)}</td><td>${d?F.esc(d.desc):'<span class="pill r">no DUPA</span>'}</td>
-      <td class="n num">${F.n(U.out(k,'M'),2)}</td><td class="n num">${b?F.m(b.bid):'—'}</td>
-      <td class="n num calc">${b?F.m(k*b.bid):'—'}</td></tr>`;}).join('');
-  const amount=Object.entries(byPay).reduce((a,[p,k])=>{
-    const d=Calc.dupa(p); return a+(d?k*Calc.dupaBid(d).bid:0);},0);
-  return `
-  ${kpi([
-    {l:'Roof framing steel',v:F.n(U.out(kg,'M'),0)+' '+U.u('M'),tone:'hi'},
-    {l:'Pay items used',v:Object.keys(byPay).length},
-    {l:'Members scheduled',v:S.steel.length},
-    {l:'Amount',v:F.short(amount)}
-  ])}
-  ${card('Roof framing member schedule','1047',
-    `<div class="pad" style="padding-bottom:0"><p class="hint">Every member carries its own pay item, so trusses, purlins, sagrods, bracing and miscellaneous framing bill separately instead of being split by a guess at the description. Unit mass is the mill figure — 2×3×1.5 mm tubular runs about 5.14 kg/m, 2×2×1.2 mm about 3.36 kg/m, 2×4×1.5 mm C-purlin about 4.90 kg/m. Piece counts assume 6 m stock.</p></div>
-     <div class="tw"><table><thead><tr><th>Member and section</th><th>Pay item</th><th class="n">Unit mass kg/m</th>
-      <th class="n">Length (${U.u('L')})</th><th class="n">Quantity</th><th class="n">Factor</th>
-      <th class="n">Weight (${U.u('M')})</th><th class="n">Pcs @ 6 m</th><th class="n">Amount</th><th></th></tr></thead>
-      <tbody>${body}<tr class="tot"><td colspan="6">Total</td><td class="n">${F.n(U.out(kg,'M'),2)}</td>
-        <td></td><td class="n">${F.m(amount)}</td><td></td></tr>
-      </tbody></table></div>`,
-    `<button class="btn pri" onclick="App.add('steel')">Add member</button>`)}
-  ${card('Summary by pay item','Roof framing',
-    `<div class="tw"><table><thead><tr><th>Pay item</th><th>Description</th><th class="n">Weight (${U.u('M')})</th>
-     <th class="n">Unit bid price</th><th class="n">Amount</th></tr></thead><tbody>${split}</tbody></table></div>`)}`;
 };
 
 /* ── quantity take-off summary ─────────────────────────────── */
@@ -1774,6 +1954,10 @@ V.ref = () => {
 const App = {
   view: 'setup',
 
+  rail(show){ S.ui.rail=!!show; App.render();
+    if(show){ const b=document.querySelector('.railclose'); if(b) b.focus(); }
+    else { const b=document.getElementById('railShow'); if(b) b.focus(); } },
+
   go(id){ App.view=id; S.ui._focus=null; App.render();
           window.scrollTo({top:0,behavior:'auto'});
           document.body.classList.remove('nav-open'); },
@@ -1781,6 +1965,7 @@ const App = {
   render(){
     const MODS=modules();
     if(!MODS.some(m=>m.id===App.view)) App.view='setup';
+    document.body.classList.toggle('rail-off', S.ui.rail===false);
 
     /* navigation */
     const grps=[...new Set(MODS.map(m=>m.grp))];
@@ -1837,14 +2022,19 @@ const App = {
     if(i>-1) c.splice(i,1); App.render(); },
   add(path){
     const c=collOf(path);
-    const lastCat = S.prices.length ? S.prices[S.prices.length-1].cat : 'Uncategorised';
-    const T={ prices:{cat:lastCat,name:'New material',unit:'pc',dim:'PC',rate:0},
+    const T={ prices:{cat:'',name:'',unit:'',dim:'PC',rate:0},
               dupa:{item:'SPL-'+String(S.dupa.length+1).padStart(2,'0'),desc:'New pay item',unit:'m²',dim:'A',lab:0,eqp:0,mat:0,on:true},
               rebar:{el:'New element',pay:'',gr:'40',d:12,len:1,nb:1,n:1,lap:1.05},
-              steel:{mem:'New member',pay:'1047(2)b',kgm:3.36,len:6,n:1,f:1.05},
               cc:{el:'New cost element',bud:0,act:0,com:0},
               port:{code:'PJ-'+(2400+S.port.length+1),name:'New project',ctr:0,bld:0,cost:0,st:'Tendering'} };
-    c.push({id:uid('x'),...(T[path]||{})}); App.render();
+    const row={id:uid('x'),...(T[path]||{})};
+    c.push(row);
+    if(path==='prices'){ S.ui.priceQ=''; S.ui.priceCats=[]; }
+    App.render();
+    if(path==='prices'){
+      const el=document.querySelector('#sheet tbody tr:last-child input');
+      if(el){ el.focus(); if(el.scrollIntoView) el.scrollIntoView({block:'center'}); }
+    }
   },
   addTake(sc){ (S.take[sc]=S.take[sc]||[]).push(
       {id:uid('t'),desc:'New line',pay:'',mode:'A',l:0,w:0,h:0,n:1,f:1,basis:''}); App.render(); },
@@ -1875,6 +2065,14 @@ const App = {
     if(!confirm('Delete "'+s.name+'"'+(n?' and its '+n+' line'+(n>1?'s':''):'')+'? This cannot be undone.')) return;
     S.scopes=S.scopes.filter(x=>x.id!==id); delete S.take[id];
     App.go('setup');
+  },
+
+  catFilter(c){
+    if(c==='__all__'){ S.ui.priceCats=[]; }
+    else { const set=new Set(S.ui.priceCats||[]);
+           set.has(c) ? set.delete(c) : set.add(c);
+           S.ui.priceCats=[...set]; }
+    S.ui._focus=null; App.render();
   },
 
   /* price list categories */
@@ -1926,11 +2124,21 @@ const App = {
     S=seedState(); App.render(); } },
 
   /* files */
+  fileName(ext){
+    /* Reference No. - Client/Owner - Date */
+    const safe = v => String(v||'').trim()
+      .replace(/[\\/:*?"<>|]/g,'-')      /* characters Windows will not accept */
+      .replace(/\s+/g,' ').replace(/-+/g,'-').replace(/^-|-$/g,'');
+    const parts=[safe(S.meta.ref)||'DARKWIZ-EST',
+                 safe(S.meta.client)||'Unnamed client',
+                 safe(S.meta.date)||new Date().toISOString().slice(0,10)];
+    return parts.join(' - ')+ext;
+  },
   saveFile(){
     const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
     const a=document.createElement('a');
     a.href=URL.createObjectURL(blob);
-    a.download=(S.meta.ref||'DARKWIZ-EST')+'_'+(S.meta.date||'')+'.json';
+    a.download=App.fileName('.json');
     a.click(); URL.revokeObjectURL(a.href);
   },
   loadFile(el){
@@ -1957,6 +2165,8 @@ const App = {
         out.push([...tr.cells].map(td=>{
           const f=td.querySelector('input,select');
           if(f) return esc(f.tagName==='SELECT'?(f.selectedOptions[0]?f.selectedOptions[0].text:''):f.value);
+          const mny=td.querySelector('.money');
+          if(mny) return esc(mny.querySelector('i').textContent+' '+mny.querySelector('b').textContent);
           return esc(td.textContent);
         }));
       });
@@ -1965,7 +2175,7 @@ const App = {
     const csv='\ufeff'+out.map(r=>r.join(',')).join('\r\n');
     const a=document.createElement('a');
     a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-    a.download=(S.meta.ref||'DARKWIZ')+'_'+m.id+'.csv'; a.click(); URL.revokeObjectURL(a.href);
+    a.download=App.fileName(' - '+m.name+'.csv'); a.click(); URL.revokeObjectURL(a.href);
   }
 };
 
@@ -1983,7 +2193,7 @@ window.addEventListener('keydown',e=>{
 App.render();
 
 /* expose for console debugging and for inline handlers in strict embeds */
-Object.assign(window,{App,Calc,F,U,modules,GRADES,REBAR,MIXES,seedState,migrate,
+Object.assign(window,{App,Calc,F,U,modules,GRADES,REBAR,MIXES,DEFAULT_SCOPES,seedState,migrate,
   __state:()=>S, __setState:o=>{S=o;}});
 
 </script>
