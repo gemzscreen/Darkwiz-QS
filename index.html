@@ -142,6 +142,27 @@ body.rail-off .rail{display:none}
 .tbtn:hover{background:#2C3D4F;color:#fff}
 .tbtn.pri{background:var(--accent-lite);border-color:var(--accent-lite);color:#fff}
 .tbtn.pri:hover{background:#0F6E7F}
+.tbtn:disabled{opacity:.45;cursor:default}
+.tbtn:disabled:hover{background:transparent;color:#B9C8D6}
+
+.savestate{
+  display:inline-flex;align-items:center;gap:6px;font-family:var(--f-num);font-size:10.5px;
+  letter-spacing:.1em;text-transform:uppercase;color:#7E93A8;white-space:nowrap;
+}
+.savestate::before{
+  content:'';width:7px;height:7px;border-radius:50%;background:var(--good);flex:0 0 auto;
+}
+.savestate.dirty{color:var(--signal)}
+.savestate.dirty::before{background:var(--signal)}
+
+#toast{
+  position:fixed;left:50%;bottom:26px;transform:translate(-50%,14px);z-index:120;
+  background:var(--ink);color:#fff;padding:10px 18px;border-radius:4px;font-size:13px;
+  box-shadow:0 6px 28px rgba(22,32,43,.32);opacity:0;pointer-events:none;
+  transition:opacity .18s ease,transform .18s ease;max-width:min(92vw,520px);
+}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+#toast.bad{background:var(--bad)}
 
 /* ── content ────────────────────────────────────────── */
 .sheet{padding:22px 22px 80px;max-width:1500px}
@@ -377,16 +398,27 @@ body.rail-off .railshow{display:inline-flex;align-items:center;gap:6px}
         <input class="tbar-fx" id="fxRate" type="number" step="0.01" title="₱ per US$1.00">
       </div>
       <div class="tbar-sp"></div>
-      <button class="tbtn" onclick="App.saveFile()">Save project file</button>
+      <span class="savestate" id="saveState" title="Whether this file holds your latest work"></span>
+      <button class="tbtn pri" id="btnSaveHTML" onclick="App.saveHTML()">Save to this file</button>
+      <button class="tbtn" onclick="App.saveHTML(true)" title="Write a separate copy">Save as…</button>
       <button class="tbtn" onclick="document.getElementById('loadFile').click()">Open</button>
-      <input type="file" id="loadFile" accept=".json" hidden onchange="App.loadFile(this)">
+      <input type="file" id="loadFile" accept=".html,.htm,.json" hidden onchange="App.loadFile(this)">
       <button class="tbtn" onclick="window.print()">Print / PDF</button>
-      <button class="tbtn pri" onclick="App.exportCSV()">Export CSV</button>
+      <button class="tbtn" onclick="App.exportCSV()">Export CSV</button>
     </div>
 
     <main class="sheet" id="sheet"></main>
+    <div id="toast" role="status" aria-live="polite"></div>
   </div>
 </div>
+
+<!-- ══ PROJECT DATA ══════════════════════════════════════════════
+     Saving to this file rewrites the block below. Everything the app
+     needs is inside it, so this single .html file is both the tool and
+     the project. Do not hand-edit it.
+     ══════════════════════════════════════════════════════════════ -->
+<script id="darkwiz-project" type="application/json">null</script>
+
 <script>
 /* ══════════════════════════════════════════════════════════════
    DARKWIZ QS — single-file estimating & cost control app
@@ -395,12 +427,35 @@ body.rail-off .railshow{display:inline-flex;align-items:center;gap:6px}
    Base units: METRIC.  Base currency: PHP.
    ══════════════════════════════════════════════════════════════ */
 
-/* ── 1. Persistence (degrades to memory if storage is blocked) ── */
+/* ── 1. Persistence ────────────────────────────────────────────
+   Three layers, in order of authority:
+     1. the data block embedded in this .html file  (travels with the file)
+     2. this browser's local storage, keyed per file (survives a refresh)
+     3. the sample project                          (first run)
+   Whichever of the first two was written later wins. Local storage
+   degrades to memory if the browser blocks it, which some do on file://. */
 const Store = {
   _m:{},
-  get(k){ try{ return localStorage.getItem(k); }catch(e){ return this._m[k] ?? null; } },
-  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){ this._m[k]=v; } }
+  get(k){ try{ const v=localStorage.getItem(k); return v===null? (this._m[k] ?? null) : v; }
+          catch(e){ return this._m[k] ?? null; } },
+  set(k,v){ this._m[k]=v; try{ localStorage.setItem(k,v); }catch(e){} }
 };
+
+/* The payload written into this file the last time it was saved. */
+const EMBED = (function(){
+  try{
+    const el=document.getElementById('darkwiz-project');
+    if(!el) return null;
+    const t=(el.textContent||'').trim();
+    if(!t || t==='null') return null;
+    return JSON.parse(t);
+  }catch(e){ return null; }
+})();
+
+/* Each saved file carries its own id, so two project files opened from the
+   same folder never overwrite each other's working copy in local storage. */
+const DOC_ID = (EMBED && EMBED.__docId) || 'workspace';
+const SKEY   = 'darkwiz_qs_v3::'+DOC_ID;
 
 /* ── 2. Unit & currency engine ─────────────────────────────── */
 const UNITS = {
@@ -1054,13 +1109,25 @@ function migrate(o){
   return o;
 }
 
+const stampOf = o => (o && o.meta && +o.meta.savedAt) || 0;
+
 let S = (function(){
-  for(const k of ['darkwiz_qs_v3','darkwiz_qs_v2','pndsyn_qs_v1']){
-    try{ const raw=Store.get(k); if(raw){ const o=migrate(JSON.parse(raw)); if(o) return o; } }catch(e){}
+  /* the working copy this browser holds for this particular file */
+  let local=null;
+  const keys=[SKEY];
+  if(DOC_ID==='workspace') keys.push('darkwiz_qs_v3','darkwiz_qs_v2','pndsyn_qs_v1');
+  for(const k of keys){
+    try{ const raw=Store.get(k); if(raw){ local=migrate(JSON.parse(raw)); if(local) break; } }catch(e){}
   }
-  return seedState();
+  /* the copy saved into the file itself */
+  let embed=null;
+  if(EMBED){ try{ const c=JSON.parse(JSON.stringify(EMBED)); delete c.__docId; embed=migrate(c); }catch(e){} }
+
+  if(local && embed) return stampOf(local) >= stampOf(embed) ? local : embed;
+  return local || embed || seedState();
 })();
-const persist = () => { try{ Store.set('darkwiz_qs_v3', JSON.stringify(S)); }catch(e){} };
+
+const persist = () => { try{ Store.set(SKEY, JSON.stringify(S)); }catch(e){} };
 
 /* ── 6. Derived calculations ───────────────────────────────── */
 const Calc = {
@@ -1316,12 +1383,22 @@ V.setup = () => {
     </div>
     <div style="margin-top:14px"><button class="btn" onclick="App.applyTier()">Apply the suggested tier</button></div>
     </div>`)}
-  ${card('Project data','Danger zone',`<div class="pad">
-    <p class="hint">Work is kept in this browser. Save a project file before clearing anything, and to move a job between machines.</p>
+  ${card('Saving your work','Project file',`<div class="pad">
+    <p class="hint"><b>Save to this file</b> writes your whole project into a copy of the app itself, so you end up with one <code>.html</code> that is both the tool and the job. Open that file on any machine — no separate data file to keep track of, and nothing to install.</p>
+    <div class="note">A web page is not allowed to overwrite the file it was opened from. In <b>Chrome and Edge</b> the app can ask for a file once and then write straight to it every time after, which is as close to saving in place as a browser permits. In <b>Firefox and Safari</b> each save arrives as a new download instead — keep the newest one and it behaves the same way.</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn pri" onclick="App.saveFile()">Save project file</button>
-      <button class="btn" onclick="document.getElementById('loadFile').click()">Open project file</button>
-      <button class="btn" onclick="App.reset()">Reset to sample project</button>
+      <button class="btn pri" onclick="App.saveHTML()">Save to this file</button>
+      <button class="btn" onclick="App.saveHTML(true)">Save as a new file…</button>
+      <button class="btn" onclick="document.getElementById('loadFile').click()">Open a project</button>
+    </div>
+    <p class="hint" style="margin:14px 0 0">Files are named <b>${F.esc(App.fileName(''))}</b>. Between saves the work also sits in this browser's storage, so a refresh or a closed tab loses nothing — but that copy is tied to this machine, which is why the saved file is what you keep.</p>
+    </div>`)}
+  ${card('Other formats','Export',`<div class="pad">
+    <p class="hint">A plain <code>.json</code> is the smaller option if you only want the data — for a colleague's copy of the app, a repository, or your own records. The app reads both formats back through <b>Open</b>.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" onclick="App.saveFile()">Export data only (.json)</button>
+      <button class="btn" onclick="App.exportCSV()">Export this sheet (.csv)</button>
+      <button class="btn" style="color:var(--bad);border-color:#E7C7C3" onclick="App.reset()">Reset to sample project</button>
     </div></div>`)}`;
 };
 
@@ -1989,6 +2066,17 @@ const App = {
     g('tbPrep',S.meta.prep||'—'); g('tbChk',S.meta.chk||'—');
     g('tbDate',S.meta.date||'—'); g('tbRev',S.meta.rev||'—');
 
+    /* save indicator */
+    const st=document.getElementById('saveState');
+    if(st){
+      const d=App.dirty();
+      st.className='savestate'+(d?' dirty':'');
+      st.textContent = d ? 'Unsaved changes'
+                         : (App._fh ? 'Saved · '+App._fh.name : 'Saved to file');
+    }
+    const sb=document.getElementById('btnSaveHTML');
+    if(sb) sb.textContent = App._fh ? 'Save' : 'Save to this file';
+
     /* toolbar toggles */
     document.querySelectorAll('#segUnit button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.cfg.units));
     document.querySelectorAll('#segCur button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.cfg.currency));
@@ -2123,6 +2211,98 @@ const App = {
   reset(){ if(confirm('Replace everything with the sample project? Save a project file first if you need this work.')){
     S=seedState(); App.render(); } },
 
+  /* ── saving into the .html file itself ───────────────────────
+     A page cannot overwrite the file it was opened from — browsers
+     forbid it. Two routes around that:
+       · Chrome and Edge expose the File System Access API, which lets
+         the person pick a file once and then be written to directly.
+       · Everywhere else, the app hands over a fresh .html download
+         that already contains the data.
+     Either way the result is one self-contained file: open it and the
+     project is there, no separate .json to keep alongside it. */
+
+  toast(msg,bad){
+    const el=document.getElementById('toast'); if(!el) return;
+    el.textContent=msg; el.className='on'+(bad?' bad':'');
+    clearTimeout(App._toast);
+    App._toast=setTimeout(()=>{ el.className=''; },bad?5200:2800);
+  },
+
+  payload(){
+    const p=JSON.parse(JSON.stringify(S));
+    delete p.ui;                                   /* view state is not project data */
+    p.meta=p.meta||{}; p.meta.savedAt=Date.now();
+    p.__docId='dw'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    return p;
+  },
+
+  buildHTML(){
+    const p=App.payload();
+    /* Escape anything that could close the script element early. */
+    const json=JSON.stringify(p)
+      .replace(/</g,'\\u003c').replace(/>/g,'\\u003e')
+      .replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');
+    /* Split rather than regex-replace: the app's own source mentions the
+       marker too, and indexOf takes the first occurrence, which is the real
+       block because it is written above the app script in the document. */
+    /* Both tags are assembled from pieces. A literal closing script tag in
+       this source would end the script element while the browser is still
+       parsing the page, which silently kills the whole app. */
+    const OPEN='<'+'script id="darkwiz-project" type="application/json">';
+    const CLOSE='<'+'/'+'script>';
+    const i=PRISTINE.indexOf(OPEN);
+    if(i<0) throw new Error('the data block is missing from this page');
+    const j=PRISTINE.indexOf(CLOSE,i+OPEN.length);
+    if(j<0) throw new Error('the data block is not closed');
+    let out=PRISTINE.slice(0,i+OPEN.length)+json+PRISTINE.slice(j);
+    const label=[S.meta.ref,S.meta.client].filter(Boolean).join(' · ');
+    out=out.replace(/<title>[\s\S]*?<\/title>/,
+      '<title>'+F.esc(label||'DARKWIZ QS')+' — DARKWIZ QS</title>');
+    App._saved=JSON.stringify({...p,meta:{...p.meta,savedAt:0},__docId:0});
+    return '<!DOCTYPE html>\n'+out;
+  },
+
+  dirty(){
+    if(!App._saved) return true;
+    const p=JSON.parse(JSON.stringify(S)); delete p.ui;
+    return JSON.stringify({...p,meta:{...p.meta,savedAt:0},__docId:0}) !== App._saved;
+  },
+
+  async saveHTML(asNew){
+    let html;
+    try{ html=App.buildHTML(); }
+    catch(e){ App.toast('Could not build the file: '+e.message,true); return; }
+
+    if(asNew) App._fh=null;
+
+    if(window.showSaveFilePicker){
+      try{
+        if(!App._fh){
+          App._fh=await window.showSaveFilePicker({
+            suggestedName:App.fileName('.html'),
+            types:[{description:'DARKWIZ QS project',accept:{'text/html':['.html']}}]
+          });
+        }
+        const w=await App._fh.createWritable();
+        await w.write(html); await w.close();
+        App.render();
+        App.toast('Saved to '+App._fh.name);
+        return;
+      }catch(e){
+        if(e && e.name==='AbortError'){ App._saved=null; return; }
+        App._fh=null;   /* fall through to a plain download */
+      }
+    }
+    try{
+      const a=document.createElement('a');
+      const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+      a.href=URL.createObjectURL(blob); a.download=App.fileName('.html');
+      a.click(); URL.revokeObjectURL(a.href);
+      App.render();
+      App.toast('Saved as '+App.fileName('.html')+' — open that file to pick this project up again.');
+    }catch(e){ App._saved=null; App.toast('The browser blocked the download: '+e.message,true); }
+  },
+
   /* files */
   fileName(ext){
     /* Reference No. - Client/Owner - Date */
@@ -2144,11 +2324,27 @@ const App = {
   loadFile(el){
     const f=el.files&&el.files[0]; if(!f) return;
     const r=new FileReader();
-    r.onload=()=>{ try{ const o=migrate(JSON.parse(r.result));
-        if(!o) throw new Error('not a project file');
-        S=o; App.go('setup'); }
-      catch(e){ alert('That file could not be read as a DARKWIZ project: '+e.message); }
-      el.value=''; };
+    r.onload=()=>{
+      try{
+        const txt=String(r.result||'');
+        let raw;
+        if(/^\s*[\[{]/.test(txt)) raw=txt;                 /* a .json project */
+        else{                                              /* a saved .html    */
+          const m=txt.match(/<script id="darkwiz-project"[^>]*>([\s\S]*?)<\/script>/);
+          if(!m) throw new Error('no project data found in that page');
+          raw=m[1].trim();
+          if(!raw||raw==='null') throw new Error('that file was saved without a project in it');
+        }
+        const parsed=JSON.parse(raw); delete parsed.__docId;
+        const o=migrate(parsed);
+        if(!o) throw new Error('the data is not in a shape this version understands');
+        S=o; App._fh=null; App._saved=null;
+        App.go('setup');
+        App.toast('Opened '+f.name);
+      }
+      catch(e){ App.toast('Could not open that file: '+e.message,true); }
+      el.value='';
+    };
     r.readAsText(f);
   },
   exportCSV(){
@@ -2180,6 +2376,19 @@ const App = {
 };
 
 /* ── 11. Boot ──────────────────────────────────────────────── */
+/* Snapshot the untouched document. Saving rewrites this, not the live DOM,
+   so a saved file opens on the settings sheet rather than mid-edit. */
+const PRISTINE = document.documentElement.outerHTML;
+
+/* If this file was opened with data already in it, that data is by
+   definition saved — start the indicator clean rather than dirty. */
+if(EMBED){
+  try{
+    const p=JSON.parse(JSON.stringify(S)); delete p.ui;
+    App._saved=JSON.stringify({...p,meta:{...p.meta,savedAt:0},__docId:0});
+  }catch(e){}
+}
+
 document.querySelectorAll('#segUnit button').forEach(b=>b.onclick=()=>App.units(b.dataset.v));
 document.querySelectorAll('#segCur button').forEach(b=>b.onclick=()=>App.currency(b.dataset.v));
 document.getElementById('fxRate').addEventListener('change',e=>App.cfg('fx',e.target.value));
@@ -2193,7 +2402,7 @@ window.addEventListener('keydown',e=>{
 App.render();
 
 /* expose for console debugging and for inline handlers in strict embeds */
-Object.assign(window,{App,Calc,F,U,modules,GRADES,REBAR,MIXES,DEFAULT_SCOPES,seedState,migrate,
+Object.assign(window,{App,Calc,F,U,modules,GRADES,REBAR,MIXES,DEFAULT_SCOPES,seedState,migrate,EMBED,DOC_ID,SKEY,
   __state:()=>S, __setState:o=>{S=o;}});
 
 </script>
