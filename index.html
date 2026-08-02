@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#16202B">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%2316202B'/%3E%3Crect x='11' y='8' width='29' height='38' rx='2.5' fill='%23F2F4F6'/%3E%3Cg fill='%230B5D6B'%3E%3Crect x='16' y='14' width='19' height='3' rx='1.5'/%3E%3Crect x='16' y='21' width='13' height='3' rx='1.5'/%3E%3Crect x='16' y='28' width='16' height='3' rx='1.5'/%3E%3C/g%3E%3Cg transform='rotate(-32 38 44)'%3E%3Crect x='19' y='37' width='40' height='14' rx='2.5' fill='%23C8940A'/%3E%3Cg stroke='%2316202B' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M26 37v5'/%3E%3Cpath d='M32 37v8'/%3E%3Cpath d='M38 37v5'/%3E%3Cpath d='M44 37v8'/%3E%3Cpath d='M50 37v5'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%2316202B'/%3E%3Crect x='11' y='8' width='29' height='38' rx='2.5' fill='%23F2F4F6'/%3E%3Cg fill='%230B5D6B'%3E%3Crect x='16' y='14' width='19' height='3' rx='1.5'/%3E%3Crect x='16' y='21' width='13' height='3' rx='1.5'/%3E%3Crect x='16' y='28' width='16' height='3' rx='1.5'/%3E%3C/g%3E%3Cg transform='rotate(-32 38 44)'%3E%3Crect x='19' y='37' width='40' height='14' rx='2.5' fill='%23C8940A'/%3E%3Cg stroke='%2316202B' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M26 37v5'/%3E%3Cpath d='M32 37v8'/%3E%3Cpath d='M38 37v5'/%3E%3Cpath d='M44 37v8'/%3E%3Cpath d='M50 37v5'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -982,6 +983,7 @@ function seedState(){
            storeys:2 },
     cfg:{ units:'metric', currency:'PHP', fx:58.50, ocm:9, profit:8, vat:5,
           contingency:0, mode:'dupa' },
+    gs:{ clientId:'', sheetId:'', lastPublish:'' },
     ui:{ qtoBy:'item', qtoQ:'', qtoSort:'item', qtoDir:'asc', qtoSrc:'',
          bomQ:'', bomSort:'amt', bomDir:'desc', dupaQ:'', priceQ:'', priceCats:[],
          rail:true, newCat:null, _focus:null },
@@ -1106,6 +1108,7 @@ function migrate(o){
 
   (o.rebar||[]).forEach(r=>{ if(r.pay===undefined) r.pay=''; if(!r.gr) r.gr = r.d>=16?'60':'40'; });
   o.bill = Object.assign({no:1,from:'',to:'',ret:10,adv:15,advOn:true,prev:{},now:{}}, o.bill||{});
+  o.gs   = Object.assign({clientId:'',sheetId:'',lastPublish:''}, o.gs||{});
   return o;
 }
 
@@ -1192,6 +1195,33 @@ const Calc = {
     const cont=direct*(+S.cfg.contingency||0)/100;
     return {rows,direct,ocm,profit,vat,cont,abc:direct+ocm+profit+vat+cont};
   },
+  /* One implementation of the billing maths, used by the billing sheet and by
+     anything that publishes it, so the two can never disagree. */
+  billing(){
+    const rows=Calc.boq();
+    const prev=S.bill.prev||{}, now=S.bill.now||{};
+    let contract=0,cPrev=0,cNow=0;
+    const lines=rows.map(r=>{
+      const p=+(prev[r.item]||0), n=+(now[r.item]||0);
+      contract+=r.amt; cPrev+=r.amt*p/100; cNow+=r.amt*n/100;
+      return {...r,pctPrev:p,pctNow:n,pctTo:p+n,amtNow:r.amt*n/100,amtTo:r.amt*(p+n)/100};
+    });
+    const toDate=cPrev+cNow;
+    const retPct=+S.bill.ret||0, advPct=+S.bill.adv||0;
+    const retNow=cNow*retPct/100, retTo=toDate*retPct/100;
+    const rec=S.bill.advOn ? cNow*advPct/100 : 0;
+    return {lines,contract,prev:cPrev,now:cNow,toDate,
+            retPct,retNow,retTo,advPct,rec,net:cNow-retNow-rec};
+  },
+  costControl(){
+    let B=0,A=0,C=0;
+    const lines=S.cc.map(r=>{
+      const bud=+r.bud||0, act=+r.act||0, com=+r.com||0;
+      B+=bud;A+=act;C+=com;
+      return {el:r.el,bud,act,com,asg:act+com,avl:bud-(act+com),pct:bud?(act+com)/bud*100:0};
+    });
+    return {lines,bud:B,act:A,com:C,asg:A+C,avl:B-(A+C),pct:B?(A+C)/B*100:0};
+  },
   bom(){
     const q={}; S.scopes.forEach(sc=>(S.take[sc.id]||[]).forEach(r=>{
       if(!r.basis) return; q[r.basis]=(q[r.basis]||0)+Calc.rowQty(r); }));
@@ -1216,6 +1246,206 @@ const Calc = {
       out.set('Structural steel (fabricated, by weight)',{name:'Structural steel (fabricated, by weight)',
         unit:'kg',cat:p?p.cat:'Structural steel',rate:p?p.rate:0,qty:sk,from:new Set(['Roofing Works'])}); }
     return [...out.values()].map(x=>({...x,amt:x.qty*x.rate}));
+  }
+};
+/* ══════════════════════════════════════════════════════════════
+   DARKWIZ QS — shared database layer
+   Google Sheets as the reporting store. Sign-in is per person via
+   Google Identity Services; the browser talks to the Sheets API
+   directly, so there is no Apps Script deployment to keep in step.
+
+   Everything is stored in BASE UNITS: metres and Philippine peso.
+   Display conversion is the reader's job, never the store's.
+   ══════════════════════════════════════════════════════════════ */
+
+const DB = {
+  VERSION: 1,
+
+  /* Column order is the contract between the publisher and the reader.
+     Append new columns at the end; never reorder or remove. */
+  SCHEMA: {
+    _Meta: ['Key','Value'],
+    Projects: ['Ref','Rev','PublishedAt','PublishedBy','Name','Client','Location',
+               'ProjectDate','Storeys','PreparedBy','CheckedBy',
+               'OCMPct','ProfitPct','VATPct','ContingencyPct',
+               'DirectCost','OCM','Profit','VAT','Contingency','ABC',
+               'PayItems','TakeoffLines','SchemaVersion'],
+    BOQ: ['Ref','Rev','PayItem','Description','Unit','Qty',
+          'LabourRate','EquipmentRate','MaterialRate','DirectRate','BidRate',
+          'DirectAmount','Amount','SourceSheets'],
+    Takeoff: ['Ref','Rev','Sheet','Description','PayItem','Mode','Qty','Unit'],
+    Materials: ['Ref','Rev','Material','Category','Unit','Qty','Rate','Amount'],
+    CostControl: ['Ref','Rev','Element','Budget','Actual','OpenCommitment',
+                  'Assigned','Available','PctUsed'],
+    Billing: ['Ref','Rev','BillingNo','PeriodFrom','PeriodTo','ContractAmount',
+              'BilledPrevious','BilledThisPeriod','BilledToDate','PctComplete',
+              'RetentionPct','RetentionHeld','Recoupment','NetDue']
+  },
+  TABS(){ return Object.keys(DB.SCHEMA); },
+
+  /* ── flatten a project into rows ─────────────────────────── */
+  flatten(S, Calc, who){
+    const m=S.meta, c=S.cfg;
+    const t=Calc.totals();
+    const ref=String(m.ref||'').trim()||'UNREFERENCED';
+    const rev=String(m.rev??'').trim()||'0';
+    const at=new Date().toISOString();
+    const K=[ref,rev];
+    const qto=Calc.qtoLines();
+
+    const boq=t.rows.map(r=>[...K, r.item, r.desc, r.unit, r.qty,
+      r.dc?0:0, 0, 0, r.dc, r.bid, r.direct, r.amt, [...r.src].join(', ')]);
+    /* fill the labour / equipment / material split from the DUPA library */
+    t.rows.forEach((r,i)=>{ const d=Calc.dupa(r.item);
+      if(d){ boq[i][6]=+d.lab||0; boq[i][7]=+d.eqp||0; boq[i][8]=+d.mat||0; } });
+
+    const cc=Calc.costControl();
+    const bl=Calc.billing();
+
+    return {
+      _Meta:[['schemaVersion',DB.VERSION],['lastPublish',at],['lastPublishBy',who||'']],
+      Projects:[[ ...K, at, who||'', m.name||'', m.client||'', m.loc||'',
+        m.date||'', +m.storeys||1, m.prep||'', m.chk||'',
+        +c.ocm||0, +c.profit||0, +c.vat||0, +c.contingency||0,
+        t.direct, t.ocm, t.profit, t.vat, t.cont, t.abc,
+        t.rows.length, qto.length, DB.VERSION ]],
+      BOQ: boq,
+      Takeoff: qto.map(l=>[...K, l.sheet, l.desc, l.item, l.mode||l.dim, l.qty,
+        (Calc.dupa(l.item)||{}).unit || l.dim]),
+      Materials: Calc.bom().map(x=>[...K, x.name, x.cat, x.unit, x.qty, x.rate, x.amt]),
+      CostControl: cc.lines.map(x=>[...K, x.el, x.bud, x.act, x.com, x.asg, x.avl, x.pct]),
+      Billing: [[ ...K, +S.bill.no||0, S.bill.from||'', S.bill.to||'',
+        bl.contract, bl.prev, bl.now, bl.toDate,
+        bl.contract? bl.toDate/bl.contract*100 : 0,
+        bl.retPct, bl.retTo, bl.rec, bl.net ]]
+    };
+  }
+};
+
+/* ── Google sign-in ─────────────────────────────────────────── */
+const SCOPES = 'https://www.googleapis.com/auth/spreadsheets '+
+               'https://www.googleapis.com/auth/userinfo.email';
+
+const Google = {
+  token:null, email:null, _client:null, _expires:0,
+
+  ready(){ return !!(window.google && google.accounts && google.accounts.oauth2); },
+  signedIn(){ return !!Google.token && Date.now() < Google._expires; },
+
+  signIn(clientId){
+    return new Promise((resolve,reject)=>{
+      if(!Google.ready()) return reject(new Error(
+        'Google sign-in did not load. Check the network, and note that sign-in only works on the hosted site, not on a file opened from disk.'));
+      if(!clientId) return reject(new Error('No OAuth client ID has been set.'));
+      try{
+        Google._client = google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: SCOPES,
+          callback: async (resp)=>{
+            if(resp.error) return reject(new Error(resp.error_description||resp.error));
+            Google.token=resp.access_token;
+            Google._expires=Date.now()+((+resp.expires_in||3600)-90)*1000;
+            try{
+              const r=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',
+                {headers:{Authorization:'Bearer '+Google.token}});
+              Google.email=r.ok ? (await r.json()).email : null;
+            }catch(e){ Google.email=null; }
+            resolve(Google.email);
+          },
+          error_callback: e=>reject(new Error(e.type==='popup_closed'
+            ? 'The sign-in window was closed.' : (e.message||'sign-in failed')))
+        });
+        Google._client.requestAccessToken({prompt: Google.token?'':'consent'});
+      }catch(e){ reject(e); }
+    });
+  },
+  signOut(){
+    if(Google.token && Google.ready()) try{ google.accounts.oauth2.revoke(Google.token); }catch(e){}
+    Google.token=null; Google.email=null; Google._expires=0;
+  }
+};
+
+/* ── Sheets API ─────────────────────────────────────────────── */
+const Sheets = {
+  base:'https://sheets.googleapis.com/v4/spreadsheets',
+
+  async call(url,opts){
+    if(!Google.signedIn()) throw new Error('Not signed in, or the session has expired.');
+    const r=await fetch(url, Object.assign({},opts,{headers:Object.assign(
+      {Authorization:'Bearer '+Google.token,'Content-Type':'application/json'},
+      (opts&&opts.headers)||{})}));
+    if(!r.ok){
+      let msg=r.status+' '+r.statusText;
+      try{ const j=await r.json(); if(j.error&&j.error.message) msg=j.error.message; }catch(e){}
+      if(r.status===401){ Google.token=null; msg='The session expired — sign in again.'; }
+      if(r.status===403) msg='Access denied. Check that this account can edit the spreadsheet, and that the Sheets API is enabled. ('+msg+')';
+      if(r.status===404) msg='No spreadsheet with that ID, or this account cannot see it.';
+      throw new Error(msg);
+    }
+    return r.status===204 ? null : r.json();
+  },
+
+  meta(id){ return Sheets.call(`${Sheets.base}/${id}?fields=properties.title,sheets.properties`); },
+
+  async ensureTabs(id){
+    const info=await Sheets.meta(id);
+    const have=new Set((info.sheets||[]).map(s=>s.properties.title));
+    const add=DB.TABS().filter(t=>!have.has(t));
+    if(add.length){
+      await Sheets.call(`${Sheets.base}/${id}:batchUpdate`,{method:'POST',
+        body:JSON.stringify({requests:add.map(title=>({addSheet:{properties:{title}}}))})});
+    }
+    /* header row on every tab, and freeze it */
+    const data=DB.TABS().map(t=>({range:`${t}!A1`,values:[DB.SCHEMA[t]]}));
+    await Sheets.call(`${Sheets.base}/${id}/values:batchUpdate`,{method:'POST',
+      body:JSON.stringify({valueInputOption:'RAW',data})});
+    const fresh=await Sheets.meta(id);
+    const byName={}; (fresh.sheets||[]).forEach(s=>byName[s.properties.title]=s.properties.sheetId);
+    await Sheets.call(`${Sheets.base}/${id}:batchUpdate`,{method:'POST',
+      body:JSON.stringify({requests:DB.TABS().map(t=>({updateSheetProperties:{
+        properties:{sheetId:byName[t],gridProperties:{frozenRowCount:1}},
+        fields:'gridProperties.frozenRowCount'}}))})});
+    return {title:info.properties.title, created:add, tabs:DB.TABS(), ids:byName};
+  },
+
+  /* Remove any rows already published for this reference and revision, so a
+     re-publish replaces its own snapshot rather than piling up duplicates.
+     Different revisions are left alone — that history is the point. */
+  async purge(id, ids, tab, ref, rev){
+    const got=await Sheets.call(`${Sheets.base}/${id}/values/${encodeURIComponent(tab+'!A2:B')}`);
+    const rows=got.values||[];
+    const kill=[];
+    rows.forEach((r,i)=>{ if(String(r[0]??'')===String(ref) && String(r[1]??'')===String(rev)) kill.push(i+1); });
+    if(!kill.length) return 0;
+    const ranges=[]; let a=kill[0], b=kill[0];
+    for(let i=1;i<kill.length;i++){
+      if(kill[i]===b+1){ b=kill[i]; } else { ranges.push([a,b]); a=b=kill[i]; }
+    }
+    ranges.push([a,b]);
+    await Sheets.call(`${Sheets.base}/${id}:batchUpdate`,{method:'POST',
+      body:JSON.stringify({requests:ranges.reverse().map(([s,e])=>({deleteDimension:{range:{
+        sheetId:ids[tab],dimension:'ROWS',startIndex:s,endIndex:e+1}}}))})});
+    return kill.length;
+  },
+
+  async append(id, tab, rows){
+    if(!rows.length) return 0;
+    await Sheets.call(
+      `${Sheets.base}/${id}/values/${encodeURIComponent(tab+'!A1')}:append`+
+      `?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+      {method:'POST',body:JSON.stringify({values:rows})});
+    return rows.length;
+  },
+
+  async readTab(id, tab){
+    const got=await Sheets.call(`${Sheets.base}/${id}/values/${encodeURIComponent(tab)}`);
+    const v=got.values||[];
+    if(v.length<2) return [];
+    const head=v[0];
+    return v.slice(1).map(r=>{ const o={};
+      head.forEach((h,i)=>{ const raw=r[i];
+        o[h] = (raw===''||raw===undefined) ? '' : (isNaN(raw)||raw===null ? raw : +raw); });
+      return o; });
   }
 };
 
@@ -1248,6 +1478,8 @@ function modules(){
     note:'Accomplishment this period against contract quantities, less retention and advance-payment recoupment.'},
    {id:'port',  code:'B4', grp:'Output', name:'Portfolio',
     note:'All live projects side by side — contract value, billed to date, cost incurred and margin.'},
+   {id:'publish',code:'D1', grp:'Database', name:'Publish to Sheets',
+    note:'Send a snapshot of this project to the shared Google Sheet that feeds the reporting page. One way — the file on your machine stays the source of truth.'},
    {id:'ref',   code:'R1', grp:'Reference', name:'Standards & rates',
     note:'NSCP 2015 bar masses and grades, DPWH concrete classes, RA 9184 mark-up ceilings, labour productivity and pakyawan rates.'}
   ];
@@ -1886,11 +2118,11 @@ V.cc = () => {
 };
 
 V.bill = () => {
-  const rows=Calc.boq(); S.bill.prev=S.bill.prev||{}; S.bill.now=S.bill.now||{};
-  let cPrev=0,cNow=0,cCtr=0;
-  const body=rows.map(r=>{
-    const p=+(S.bill.prev[r.item]||0), n=+(S.bill.now[r.item]||0), td=p+n;
-    const ctr=r.amt; cCtr+=ctr; cPrev+=ctr*p/100; cNow+=ctr*n/100;
+  S.bill.prev=S.bill.prev||{}; S.bill.now=S.bill.now||{};
+  const B=Calc.billing();
+  const cCtr=B.contract, cNow=B.now;
+  const body=B.lines.map(r=>{
+    const p=r.pctPrev, n=r.pctNow, td=r.pctTo, ctr=r.amt;
     return `<tr><td class="num" style="width:96px">${F.esc(r.item)}</td>
       <td>${F.esc(r.desc)}</td>
       <td class="n num" style="width:110px">${F.m(ctr)}</td>
@@ -1899,13 +2131,10 @@ V.bill = () => {
       <td class="n" style="width:82px"><input class="cell n" type="number" step="any" value="${n}"
         onchange="App.bill('now','${r.item}',this.value)"></td>
       <td class="n num calc" style="width:78px">${F.n(td,1)}%</td>
-      <td class="n num" style="width:120px">${F.m(ctr*n/100)}</td>
-      <td class="n num" style="width:120px">${F.m(ctr*td/100)}</td></tr>`;
+      <td class="n num" style="width:120px">${F.m(r.amtNow)}</td>
+      <td class="n num" style="width:120px">${F.m(r.amtTo)}</td></tr>`;
   }).join('');
-  const toDate=cPrev+cNow;
-  const ret=toDate*(+S.bill.ret||0)/100;
-  const rec=S.bill.advOn ? cNow*(+S.bill.adv||0)/100 : 0;
-  const net=cNow-(cNow*(+S.bill.ret||0)/100)-rec;
+  const toDate=B.toDate, ret=B.retTo, rec=B.rec, net=B.net;
   return `
   ${kpi([
     {l:'Contract amount',v:F.short(cCtr)},
@@ -1931,7 +2160,7 @@ V.bill = () => {
      <th class="n">Amount this period</th><th class="n">Amount to date</th></tr></thead>
      <tbody>${body}
      <tr class="sum"><td colspan="6">Gross amount this period</td><td class="n num">${F.m(cNow)}</td><td class="n num">${F.m(toDate)}</td></tr>
-     <tr class="sum"><td colspan="6">Less retention — ${S.bill.ret}%</td><td class="n num">${F.m(cNow*(+S.bill.ret||0)/100)}</td><td class="n num">${F.m(ret)}</td></tr>
+     <tr class="sum"><td colspan="6">Less retention — ${S.bill.ret}%</td><td class="n num">${F.m(B.retNow)}</td><td class="n num">${F.m(ret)}</td></tr>
      <tr class="sum"><td colspan="6">Less recoupment of advance payment — ${S.bill.advOn?S.bill.adv+'%':'not applied'}</td><td class="n num">${F.m(rec)}</td><td class="n num">—</td></tr>
      <tr class="tot"><td colspan="6">Net amount due this billing</td><td class="n">${F.m(net)}</td><td class="n">—</td></tr>
      </tbody></table></div>
@@ -2375,6 +2604,154 @@ const App = {
   }
 };
 
+
+/* ── Publish module ────────────────────────────────────────── */
+V.publish = () => {
+  const g=S.gs||{};
+  const on=Google.signedIn();
+  const t=Calc.totals();
+  const ref=String(S.meta.ref||'').trim(), rev=String(S.meta.rev??'').trim();
+  const preview=(()=>{ try{ return DB.flatten(S,Calc,Google.email); }catch(e){ return null; } })();
+  const counts=preview ? DB.TABS().filter(k=>k!=='_Meta')
+      .map(k=>({tab:k,n:(preview[k]||[]).length})) : [];
+
+  const warn=[];
+  if(!ref) warn.push('This project has no reference number. Every row in the database is keyed on it, so set one on the settings sheet before publishing.');
+  if(!g.clientId) warn.push('No OAuth client ID yet — see the setup notes below.');
+  if(!g.sheetId) warn.push('No spreadsheet ID yet.');
+  if(location.protocol==='file:') warn.push('This page was opened from disk. Google will not allow sign-in from a <code>file://</code> address — use the hosted copy of DARKWIZ to publish.');
+
+  return `
+  ${kpi([
+    {l:'Signed in as',v:on?(Google.email||'signed in'):'Not signed in',tone:on?'ok':''},
+    {l:'Reference',v:ref?F.esc(ref):'— not set —',tone:ref?'':'warn',s:'revision '+(rev||'0')},
+    {l:'Approved budget',v:F.short(t.abc),s:'published in peso, always'},
+    {l:'Rows to publish',v:counts.reduce((a,x)=>a+x.n,0)}
+  ])}
+
+  ${warn.length?`<div class="card"><div class="pad"><div class="note">
+     ${warn.map(w=>'<div style="margin:3px 0">'+w+'</div>').join('')}</div></div></div>`:''}
+
+  ${card('Connection','Google Sheets',`<div class="pad">
+    <p class="hint">Your rates never pass through anyone else's server. This page talks to the Google Sheets API directly using your own Google account, and the spreadsheet stays shared with whoever you choose — nobody else can read it, even with the link to this page.</p>
+    <div class="fgrid">
+      <div class="f"><label>OAuth client ID</label>
+        <input value="${F.esc(g.clientId||'')}" placeholder="…apps.googleusercontent.com"
+               onchange="App.gs('clientId',this.value)"></div>
+      <div class="f"><label>Spreadsheet ID</label>
+        <input value="${F.esc(g.sheetId||'')}" placeholder="the long string in the Sheet URL"
+               onchange="App.gs('sheetId',this.value)"></div>
+      <div class="f"><label>Status</label>
+        <input class="ro" readonly value="${on?'Signed in'+(Google.email?' — '+Google.email:''):'Signed out'}"></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+      ${on ? `<button class="btn" onclick="App.gsOut()">Sign out</button>`
+           : `<button class="btn pri" onclick="App.gsIn()">Sign in with Google</button>`}
+      <button class="btn" ${on?'':'disabled'} onclick="App.gsInit()">Set up the tabs</button>
+      <button class="btn" ${on?'':'disabled'} onclick="App.gsCheck()">Test the connection</button>
+    </div>
+    <p class="hint" style="margin:12px 0 0">The client ID and spreadsheet ID are saved with the project, so a file you pass to a colleague already points at the right database. Neither is a secret — access is controlled by who the spreadsheet is shared with.</p>
+    </div>`)}
+
+  ${card('Publish this project','One-way',`<div class="pad">
+    <p class="hint">Publishing writes a snapshot of <b>${F.esc(ref||'this project')} revision ${F.esc(rev||'0')}</b> to the database. Re-publishing the same reference and revision replaces its own rows rather than piling up duplicates — but a different revision is kept alongside, so the history of how an estimate moved is preserved.</p>
+    <div class="tw"><table><thead><tr><th>Tab</th><th class="n">Rows</th><th>What it carries</th></tr></thead><tbody>
+      ${counts.map(c=>`<tr><td class="num">${c.tab}</td><td class="n num">${c.n}</td>
+        <td style="font-size:12px;color:var(--muted)">${F.esc({
+          Projects:'Header totals — direct cost, mark-up, ABC',
+          BOQ:'Every priced pay item with its rate build-up',
+          Takeoff:'Measured quantities by source sheet',
+          Materials:'Exploded bill of materials',
+          CostControl:'Budget, actual and open commitment',
+          Billing:'Contract, billed to date, retention, net due'}[c.tab]||'')}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+      <button class="btn pri" ${on&&ref?'':'disabled'} onclick="App.gsPublish()">Publish to the database</button>
+      <span style="align-self:center;font-size:12px;color:var(--muted)">
+        ${g.lastPublish?('Last published '+F.esc(g.lastPublish)):'Not yet published from this file.'}</span>
+    </div>
+    <div id="pubLog" style="margin-top:14px"></div>
+    </div>`)}
+
+  ${card('Setting this up','One-time',`<div class="pad">
+    <p class="hint">Both IDs come from the same Google account. The steps are in the setup guide that came with this build; in short:</p>
+    <ol class="hint" style="margin:0;padding-left:20px;line-height:1.9">
+      <li>Create the spreadsheet and copy its ID from the URL — the part between <code>/d/</code> and <code>/edit</code>.</li>
+      <li>In Google Cloud Console, create a project and enable the <b>Google Sheets API</b>.</li>
+      <li>Configure the OAuth consent screen. Choose <b>Internal</b> if PNDSYN is on Google Workspace — that avoids app verification entirely.</li>
+      <li>Create an <b>OAuth client ID</b> of type <i>Web application</i>, and add your GitHub Pages address to <b>Authorised JavaScript origins</b>.</li>
+      <li>Paste both IDs above, sign in, and press <b>Set up the tabs</b> once.</li>
+    </ol>
+    <div class="note" style="margin-top:14px"><b>The origin must match exactly.</b> Enter <code>https://yourname.github.io</code> with no trailing slash and no path. A mismatch is the cause of nearly every <code>redirect_uri_mismatch</code> or <code>origin is not allowed</code> error at sign-in.</div>
+    </div>`)}`;
+};
+
+/* ── controller additions ──────────────────────────────────── */
+App.gs = (k,v)=>{ S.gs=S.gs||{}; S.gs[k]=String(v||'').trim(); App.render(); };
+
+App.gsIn = async ()=>{
+  try{
+    await Google.signIn((S.gs||{}).clientId);
+    App.render(); App.toast('Signed in'+(Google.email?' as '+Google.email:''));
+  }catch(e){ App.toast(e.message,true); }
+};
+App.gsOut = ()=>{ Google.signOut(); App.render(); App.toast('Signed out'); };
+
+App.gsCheck = async ()=>{
+  const g=S.gs||{};
+  try{
+    const info=await Sheets.meta(g.sheetId);
+    const tabs=(info.sheets||[]).map(s=>s.properties.title);
+    const missing=DB.TABS().filter(t=>!tabs.includes(t));
+    App.toast(`Connected to “${info.properties.title}”. `+
+      (missing.length?`Missing ${missing.length} tab(s) — press Set up the tabs.`:'All tabs present.'),
+      !!missing.length);
+  }catch(e){ App.toast(e.message,true); }
+};
+
+App.gsInit = async ()=>{
+  const g=S.gs||{};
+  try{
+    App.toast('Setting up the spreadsheet…');
+    const r=await Sheets.ensureTabs(g.sheetId);
+    App.toast(r.created.length
+      ? `Created ${r.created.length} tab(s): ${r.created.join(', ')}.`
+      : 'All tabs were already in place; headers refreshed.');
+  }catch(e){ App.toast(e.message,true); }
+};
+
+App.gsPublish = async ()=>{
+  const g=S.gs||{};
+  const log=document.getElementById('pubLog');
+  const say=(m,cls)=>{ if(log) log.innerHTML+=`<div style="font-size:12.5px;padding:2px 0;${cls||''}">${m}</div>`; };
+  if(log) log.innerHTML='';
+  const ref=String(S.meta.ref||'').trim(), rev=String(S.meta.rev??'').trim()||'0';
+  if(!ref){ App.toast('Set a reference number first.',true); return; }
+  try{
+    const data=DB.flatten(S,Calc,Google.email);
+    say('Checking the spreadsheet…');
+    const info=await Sheets.ensureTabs(g.sheetId);
+    let wrote=0, removed=0;
+    for(const tab of DB.TABS()){
+      if(tab==='_Meta') continue;
+      const rows=data[tab]||[];
+      removed += await Sheets.purge(g.sheetId, info.ids, tab, ref, rev);
+      wrote   += await Sheets.append(g.sheetId, tab, rows);
+      say(`${tab}: ${rows.length} row${rows.length===1?'':'s'} written.`);
+    }
+    await Sheets.call(`${Sheets.base}/${g.sheetId}/values/${encodeURIComponent('_Meta!A2')}`+
+      `?valueInputOption=RAW`,{method:'PUT',body:JSON.stringify({values:data._Meta})});
+    S.gs.lastPublish=new Date().toISOString().slice(0,16).replace('T',' ');
+    say(`<b>Done — ${wrote} rows written${removed?', '+removed+' superseded rows replaced':''}.</b>`,
+        'color:var(--good)');
+    App.toast(`Published ${ref} rev ${rev} — ${wrote} rows.`);
+    App.render();
+  }catch(e){
+    say('<b>Stopped: '+F.esc(e.message)+'</b>','color:var(--bad)');
+    App.toast(e.message,true);
+  }
+};
+
 /* ── 11. Boot ──────────────────────────────────────────────── */
 /* Snapshot the untouched document. Saving rewrites this, not the live DOM,
    so a saved file opens on the settings sheet rather than mid-edit. */
@@ -2402,7 +2779,7 @@ window.addEventListener('keydown',e=>{
 App.render();
 
 /* expose for console debugging and for inline handlers in strict embeds */
-Object.assign(window,{App,Calc,F,U,modules,GRADES,REBAR,MIXES,DEFAULT_SCOPES,seedState,migrate,EMBED,DOC_ID,SKEY,
+Object.assign(window,{App,Calc,F,U,modules,GRADES,REBAR,MIXES,DEFAULT_SCOPES,seedState,migrate,EMBED,DOC_ID,SKEY,DB,Google,Sheets,
   __state:()=>S, __setState:o=>{S=o;}});
 
 </script>
