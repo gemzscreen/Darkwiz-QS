@@ -1,0 +1,2410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DARKWIZ QS — Estimating &amp; Cost Control</title>
+<meta name="description" content="DARKWIZ QS — Philippine quantity surveying suite: take-off, DUPA, BOQ, cost control and progress billing. NSCP 2015 / DPWH / RA 9184.">
+<meta name="theme-color" content="#16202B">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%2316202B'/%3E%3Crect x='11' y='8' width='29' height='38' rx='2.5' fill='%23F2F4F6'/%3E%3Cg fill='%230B5D6B'%3E%3Crect x='16' y='14' width='19' height='3' rx='1.5'/%3E%3Crect x='16' y='21' width='13' height='3' rx='1.5'/%3E%3Crect x='16' y='28' width='16' height='3' rx='1.5'/%3E%3C/g%3E%3Cg transform='rotate(-32 38 44)'%3E%3Crect x='19' y='37' width='40' height='14' rx='2.5' fill='%23C8940A'/%3E%3Cg stroke='%2316202B' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M26 37v5'/%3E%3Cpath d='M32 37v8'/%3E%3Cpath d='M38 37v5'/%3E%3Cpath d='M44 37v8'/%3E%3Cpath d='M50 37v5'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%2316202B'/%3E%3Crect x='11' y='8' width='29' height='38' rx='2.5' fill='%23F2F4F6'/%3E%3Cg fill='%230B5D6B'%3E%3Crect x='16' y='14' width='19' height='3' rx='1.5'/%3E%3Crect x='16' y='21' width='13' height='3' rx='1.5'/%3E%3Crect x='16' y='28' width='16' height='3' rx='1.5'/%3E%3C/g%3E%3Cg transform='rotate(-32 38 44)'%3E%3Crect x='19' y='37' width='40' height='14' rx='2.5' fill='%23C8940A'/%3E%3Cg stroke='%2316202B' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M26 37v5'/%3E%3Cpath d='M32 37v8'/%3E%3Cpath d='M38 37v5'/%3E%3Cpath d='M44 37v8'/%3E%3Cpath d='M50 37v5'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#16202B; --ink-2:#1F2C3A; --ink-3:#2C3D4F;
+  --paper:#EDF0F3; --surface:#FFFFFF; --surface-2:#F7F9FA;
+  --rule:#CFD7E0; --rule-soft:#E3E9EE;
+  --accent:#0B5D6B; --accent-lite:#128296; --accent-wash:#E4F1F3;
+  --signal:#C8940A; --signal-wash:#FBF3DE;
+  --good:#166E4D; --bad:#A32117; --muted:#61728A;
+  --input:#FFFDF2; --input-rule:#D9C68B;
+  --calc:#F3F7F4;
+  --shadow:0 1px 2px rgba(22,32,43,.08),0 8px 24px rgba(22,32,43,.06);
+  --rail:248px;
+  --f-disp:'Barlow Condensed',Impact,sans-serif;
+  --f-body:'IBM Plex Sans',-apple-system,Segoe UI,sans-serif;
+  --f-num:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--f-body); font-size:14px; color:var(--ink);
+  background:var(--paper); -webkit-font-smoothing:antialiased;
+}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+a{color:var(--accent-lite)}
+
+/* ── layout ─────────────────────────────────────────── */
+.app{display:flex;min-height:100vh}
+body.rail-off{--rail:0px}
+body.rail-off .rail{display:none}
+.railclose{
+  border:1px solid #3C5064;background:transparent;color:#8FA3B6;width:24px;height:24px;
+  border-radius:3px;cursor:pointer;line-height:1;font-size:15px;padding:0;flex:0 0 auto;
+}
+.railclose:hover{background:#2C3D4F;color:#fff}
+.brand{display:flex;align-items:flex-start;gap:10px}
+.brand .bwrap{flex:1;min-width:0}
+.rail{
+  width:var(--rail); flex:0 0 var(--rail); background:var(--ink); color:#C6D2DE;
+  position:sticky; top:0; height:100vh; overflow-y:auto; z-index:40;
+}
+.brand{padding:18px 18px 14px;border-bottom:1px solid rgba(255,255,255,.09)}
+.brand .mark{
+  font-family:var(--f-disp); font-size:26px; font-weight:700; letter-spacing:.06em;
+  color:#fff; line-height:1; text-transform:uppercase;
+}
+.brand .mark span{color:var(--signal)}
+.brand .sub{
+  font-family:var(--f-mono,var(--f-num)); font-size:9.5px; letter-spacing:.18em;
+  text-transform:uppercase; color:#7C8FA3; margin-top:6px;
+}
+.navgrp{padding:14px 0 2px}
+.navgrp h4{
+  margin:0 0 6px; padding:0 18px; font-family:var(--f-num); font-size:9.5px;
+  font-weight:600; letter-spacing:.2em; text-transform:uppercase; color:#5E7186;
+}
+.navbtn{
+  display:flex;align-items:center;gap:9px;width:100%;padding:8px 18px;border:0;
+  background:none;color:#C6D2DE;text-align:left;cursor:pointer;font-size:13.5px;
+  border-left:3px solid transparent;
+}
+.navbtn:hover{background:rgba(255,255,255,.05);color:#fff}
+.navbtn.on{background:rgba(18,130,150,.22);color:#fff;border-left-color:var(--signal);font-weight:500}
+.navbtn .cd{
+  font-family:var(--f-num);font-size:9.5px;color:#6C8091;min-width:30px;
+}
+.navbtn.on .cd{color:var(--signal)}
+.railfoot{padding:14px 18px 24px;font-size:11px;color:#5E7186;line-height:1.5}
+
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+
+/* ── title block (signature) ────────────────────────── */
+.titleblock{
+  background:var(--surface); border-bottom:2px solid var(--ink);
+  display:grid; grid-template-columns:1fr auto; align-items:stretch;
+}
+.tb-left{padding:12px 22px 11px;min-width:0}
+.tb-crumb{
+  font-family:var(--f-num);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--muted);display:flex;gap:8px;align-items:center;
+}
+.tb-crumb .chip{
+  background:var(--ink);color:#fff;padding:2px 7px;border-radius:2px;letter-spacing:.1em;
+}
+.tb-title{
+  font-family:var(--f-disp);font-size:30px;font-weight:600;line-height:1.02;
+  letter-spacing:.005em;margin:4px 0 2px;text-transform:uppercase;
+}
+.tb-note{font-size:12.5px;color:var(--muted);max-width:78ch;line-height:1.45}
+.tb-grid{
+  display:grid;grid-template-columns:repeat(4,minmax(96px,auto));
+  border-left:1px solid var(--rule);
+}
+.tb-cell{
+  padding:8px 14px;border-left:1px solid var(--rule-soft);border-bottom:1px solid var(--rule-soft);
+  display:flex;flex-direction:column;justify-content:center;
+}
+.tb-cell:nth-child(-n+4){border-bottom:1px solid var(--rule)}
+.tb-cell b{
+  font-family:var(--f-num);font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--muted);font-weight:600;
+}
+.tb-cell span{font-size:13px;font-weight:500;margin-top:2px;white-space:nowrap}
+
+/* ── toolbar ────────────────────────────────────────── */
+.toolbar{
+  background:var(--ink-2);color:#D5DEE7;padding:7px 22px;display:flex;
+  align-items:center;gap:18px;flex-wrap:wrap;position:sticky;top:0;z-index:29;
+}
+.tgl{display:flex;align-items:center;gap:8px}
+.tgl>b{
+  font-family:var(--f-num);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:#7E93A8;font-weight:600;
+}
+.seg{display:flex;border:1px solid #3C5064;border-radius:3px;overflow:hidden}
+.seg button{
+  border:0;background:transparent;color:#9FB2C4;padding:4px 12px;cursor:pointer;
+  font-family:var(--f-num);font-size:11px;font-weight:500;letter-spacing:.05em;
+}
+.seg button.on{background:var(--signal);color:#1B1405;font-weight:600}
+.tbar-fx{
+  width:74px;background:#101922;border:1px solid #3C5064;color:#D5DEE7;
+  padding:3px 7px;border-radius:3px;font-family:var(--f-num);font-size:11.5px;text-align:right;
+}
+.tbar-sp{flex:1}
+.tbtn{
+  background:transparent;border:1px solid #3C5064;color:#B9C8D6;padding:4px 11px;
+  border-radius:3px;cursor:pointer;font-size:12px;
+}
+.tbtn:hover{background:#2C3D4F;color:#fff}
+.tbtn.pri{background:var(--accent-lite);border-color:var(--accent-lite);color:#fff}
+.tbtn.pri:hover{background:#0F6E7F}
+.tbtn:disabled{opacity:.45;cursor:default}
+.tbtn:disabled:hover{background:transparent;color:#B9C8D6}
+
+.savestate{
+  display:inline-flex;align-items:center;gap:6px;font-family:var(--f-num);font-size:10.5px;
+  letter-spacing:.1em;text-transform:uppercase;color:#7E93A8;white-space:nowrap;
+}
+.savestate::before{
+  content:'';width:7px;height:7px;border-radius:50%;background:var(--good);flex:0 0 auto;
+}
+.savestate.dirty{color:var(--signal)}
+.savestate.dirty::before{background:var(--signal)}
+
+#toast{
+  position:fixed;left:50%;bottom:26px;transform:translate(-50%,14px);z-index:120;
+  background:var(--ink);color:#fff;padding:10px 18px;border-radius:4px;font-size:13px;
+  box-shadow:0 6px 28px rgba(22,32,43,.32);opacity:0;pointer-events:none;
+  transition:opacity .18s ease,transform .18s ease;max-width:min(92vw,520px);
+}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+#toast.bad{background:var(--bad)}
+
+/* ── content ────────────────────────────────────────── */
+.sheet{padding:22px 22px 80px;max-width:1500px}
+.card{
+  background:var(--surface);border:1px solid var(--rule);border-radius:4px;
+  margin-bottom:18px;box-shadow:var(--shadow);overflow:hidden;
+}
+.card>header{
+  padding:10px 16px;border-bottom:1px solid var(--rule);background:var(--surface-2);
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+}
+.card>header h3{
+  margin:0;font-family:var(--f-disp);font-size:18px;font-weight:600;letter-spacing:.02em;
+  text-transform:uppercase;
+}
+.card>header .code{
+  font-family:var(--f-num);font-size:10px;background:var(--accent-wash);color:var(--accent);
+  padding:2px 7px;border-radius:2px;letter-spacing:.08em;font-weight:600;
+}
+.card>header .sp{flex:1}
+.card>header p{margin:0;font-size:12px;color:var(--muted)}
+.pad{padding:16px}
+.hint{
+  font-size:12px;color:var(--muted);line-height:1.55;margin:0 0 12px;
+}
+.note{
+  background:var(--signal-wash);border-left:3px solid var(--signal);padding:9px 13px;
+  font-size:12.5px;line-height:1.55;margin:0 0 14px;border-radius:0 3px 3px 0;
+}
+.note b{font-weight:600}
+
+/* ── tables ─────────────────────────────────────────── */
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{
+  font-family:var(--f-num);font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;
+  font-weight:600;color:#405266;background:var(--surface-2);
+  padding:7px 9px;text-align:left;border-bottom:2px solid var(--rule);white-space:nowrap;
+}
+th.n,td.n{text-align:right}
+th.c,td.c{text-align:center}
+td{padding:4px 9px;border-bottom:1px solid var(--rule-soft);vertical-align:middle}
+tbody tr:hover{background:#FAFCFD}
+td.n,td.num{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:12.5px}
+tr.grp td{
+  background:var(--ink-3);color:#fff;font-family:var(--f-disp);font-size:14px;
+  letter-spacing:.06em;text-transform:uppercase;font-weight:600;padding:5px 9px;
+}
+tr.sum td{background:var(--calc);font-weight:600;border-top:1px solid var(--rule)}
+tr.tot td{
+  background:var(--ink);color:#fff;font-weight:600;
+  font-family:var(--f-num);border-top:2px solid var(--ink);
+}
+tr.tot td:first-child{font-family:var(--f-disp);font-size:15px;letter-spacing:.05em;text-transform:uppercase}
+.calc{background:var(--calc);color:var(--accent);font-weight:500}
+
+/* Money is a symbol glued to a figure. Rendered as one inline-flex unit so the
+   sign can never wrap onto its own line, however narrow the column gets. */
+.money{
+  display:inline-flex;align-items:baseline;gap:.28em;white-space:nowrap;
+  font-family:var(--f-num);font-variant-numeric:tabular-nums;
+}
+.money>i{font-style:normal;opacity:.62;font-size:.86em;flex:0 0 auto}
+.money>b{font-weight:inherit;flex:0 0 auto}
+td .money,th .money{justify-content:flex-end}
+.kpi .money{display:inline-flex;font-size:inherit;letter-spacing:-.01em}
+.kpi .money>i{font-size:.68em;opacity:.55}
+th.n,td.n{text-align:right;white-space:nowrap}
+tr.tot td .money>i,tr.tot td .money>b{opacity:1}
+tr.tot td .money>i{opacity:.7}
+
+input.cell,select.cell,textarea.cell{
+  width:100%;border:1px solid transparent;background:var(--input);
+  border-bottom:1px solid var(--input-rule);padding:3px 6px;border-radius:2px;
+}
+input.cell:focus,select.cell:focus{outline:2px solid var(--accent-lite);outline-offset:-1px;background:#fff}
+input.cell.n{text-align:right;font-family:var(--f-num);font-variant-numeric:tabular-nums}
+select.cell{background:var(--input);cursor:pointer}
+.iconbtn{
+  border:1px solid var(--rule);background:#fff;color:var(--muted);width:24px;height:24px;
+  border-radius:3px;cursor:pointer;line-height:1;font-size:14px;padding:0;
+}
+.iconbtn:hover{border-color:var(--bad);color:var(--bad);background:#FDF3F2}
+.btn{
+  border:1px solid var(--rule);background:#fff;padding:6px 13px;border-radius:3px;
+  cursor:pointer;font-size:12.5px;font-weight:500;
+}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.pri:hover{background:var(--accent-lite);color:#fff}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;border-top:1px solid var(--rule-soft);background:var(--surface-2)}
+
+/* ── forms & KPI ────────────────────────────────────── */
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px 16px}
+.f label{
+  display:block;font-family:var(--f-num);font-size:9.5px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:3px;
+}
+.f input,.f select,.f textarea{
+  width:100%;padding:6px 8px;border:1px solid var(--rule);border-radius:3px;background:var(--input);
+}
+.f input:focus,.f select:focus{outline:2px solid var(--accent-lite);outline-offset:-1px}
+.f .ro{background:var(--calc);color:var(--accent);font-family:var(--f-num);font-weight:500}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1px;background:var(--rule)}
+.kpi{background:#fff;padding:13px 15px}
+.kpi b{
+  display:block;font-family:var(--f-num);font-size:9.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted);font-weight:600;
+}
+.kpi>span{
+  display:block;font-family:var(--f-num);font-size:21px;font-weight:600;margin-top:5px;
+  font-variant-numeric:tabular-nums;letter-spacing:-.01em;
+}
+.kpi small{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+.kpi.hi span{color:var(--accent)}
+.kpi.warn span{color:var(--bad)}
+.kpi.ok span{color:var(--good)}
+
+.bar{height:6px;background:var(--rule-soft);border-radius:3px;overflow:hidden;min-width:56px}
+.bar i{display:block;height:100%;background:var(--accent-lite)}
+.bar i.over{background:var(--bad)}
+.bar i.near{background:var(--signal)}
+
+.pill{
+  display:inline-block;font-family:var(--f-num);font-size:10px;padding:2px 7px;border-radius:10px;
+  letter-spacing:.05em;font-weight:600;
+}
+.pill.a{background:var(--accent-wash);color:var(--accent)}
+.pill.g{background:#E2F0EA;color:var(--good)}
+.pill.r{background:#FBEBE9;color:var(--bad)}
+.pill.y{background:var(--signal-wash);color:#7A5A05}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 11px;background:var(--surface-2);
+  border-bottom:1px solid var(--rule)}
+.chip-b{
+  border:1px solid var(--rule);background:#fff;color:var(--ink-3);padding:3px 11px;
+  border-radius:14px;cursor:pointer;font-size:12px;line-height:1.5;white-space:nowrap;
+}
+.chip-b:hover{border-color:var(--accent);color:var(--accent)}
+.chip-b.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+.chip-b .ct{opacity:.6;font-family:var(--f-num);font-size:10.5px;margin-left:5px}
+.chip-b.on .ct{opacity:.8}
+.chip-b.clear{border-style:dashed;color:var(--muted)}
+
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:1080px){.two{grid-template-columns:1fr}}
+
+/* ── responsive ─────────────────────────────────────── */
+.railtoggle{display:none}
+.railshow{display:none}
+body.rail-off .railshow{display:inline-flex;align-items:center;gap:6px}
+@media(max-width:900px){
+  .railshow,body.rail-off .railshow{display:none}
+  body.rail-off .rail{display:block}
+  body.rail-off{--rail:248px}
+  .railclose{display:none}
+  .rail{position:fixed;left:0;top:0;transform:translateX(-100%);transition:transform .22s ease}
+  body.nav-open .rail{transform:none;box-shadow:0 0 0 100vmax rgba(22,32,43,.45)}
+  .railtoggle{display:inline-flex;align-items:center;gap:6px}
+  .titleblock{grid-template-columns:1fr}
+  .tb-grid{border-left:0;border-top:1px solid var(--rule);grid-template-columns:repeat(2,1fr)}
+  .tb-title{font-size:24px}
+  .sheet{padding:14px 12px 70px}
+}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+:focus-visible{outline:2px solid var(--accent-lite);outline-offset:2px}
+
+/* ── print ──────────────────────────────────────────── */
+@media print{
+  .rail,.toolbar,.btnrow,.iconbtn,.noprint{display:none!important}
+  body{background:#fff}
+  .app{display:block}
+  .sheet{padding:0;max-width:none}
+  .card{box-shadow:none;border:1px solid #999;break-inside:avoid;margin-bottom:12px}
+  .titleblock{position:static;border-bottom:2px solid #000}
+  input.cell,select.cell{background:none;border:0;-webkit-appearance:none;appearance:none}
+  th{background:#eee!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  tr.tot td{background:#222!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @page{size:A4 landscape;margin:12mm}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="rail" id="rail" aria-label="Modules">
+    <div class="brand">
+      <div class="bwrap">
+        <div class="mark">DARK<span>WIZ</span> QS</div>
+        <div class="sub">Quantity Surveying Suite</div>
+      </div>
+      <button class="railclose noprint" title="Hide the sidebar" aria-label="Hide the sidebar"
+              onclick="App.rail(false)">‹</button>
+    </div>
+    <div id="nav"></div>
+    <div class="railfoot">
+      NSCP 2015 · DPWH · RA 9184<br>
+      Data is saved in this browser only.
+    </div>
+  </nav>
+
+  <div class="main">
+    <header class="titleblock">
+      <div class="tb-left">
+        <div class="tb-crumb"><span class="chip" id="tbCode">—</span><span id="tbGroup">—</span></div>
+        <h1 class="tb-title" id="tbTitle">—</h1>
+        <p class="tb-note" id="tbNote"></p>
+      </div>
+      <div class="tb-grid">
+        <div class="tb-cell"><b>Project</b><span id="tbProj">—</span></div>
+        <div class="tb-cell"><b>Location</b><span id="tbLoc">—</span></div>
+        <div class="tb-cell"><b>Units</b><span id="tbUnit">Metric</span></div>
+        <div class="tb-cell"><b>Currency</b><span id="tbCur">PHP</span></div>
+        <div class="tb-cell"><b>Prepared by</b><span id="tbPrep">—</span></div>
+        <div class="tb-cell"><b>Checked by</b><span id="tbChk">—</span></div>
+        <div class="tb-cell"><b>Date</b><span id="tbDate">—</span></div>
+        <div class="tb-cell"><b>Rev.</b><span id="tbRev">—</span></div>
+      </div>
+    </header>
+
+    <div class="toolbar noprint">
+      <button class="tbtn railtoggle" onclick="document.body.classList.toggle('nav-open')">☰ Modules</button>
+      <button class="tbtn railshow" id="railShow" title="Show the sidebar" onclick="App.rail(true)">☰ Modules</button>
+      <div class="tgl"><b>Units</b>
+        <div class="seg" id="segUnit">
+          <button data-v="metric">Metric</button><button data-v="imperial">Imperial</button>
+        </div>
+      </div>
+      <div class="tgl"><b>Currency</b>
+        <div class="seg" id="segCur">
+          <button data-v="PHP">₱ PHP</button><button data-v="USD">$ USD</button>
+        </div>
+        <input class="tbar-fx" id="fxRate" type="number" step="0.01" title="₱ per US$1.00">
+      </div>
+      <div class="tbar-sp"></div>
+      <span class="savestate" id="saveState" title="Whether this file holds your latest work"></span>
+      <button class="tbtn pri" id="btnSaveHTML" onclick="App.saveHTML()">Save to this file</button>
+      <button class="tbtn" onclick="App.saveHTML(true)" title="Write a separate copy">Save as…</button>
+      <button class="tbtn" onclick="document.getElementById('loadFile').click()">Open</button>
+      <input type="file" id="loadFile" accept=".html,.htm,.json" hidden onchange="App.loadFile(this)">
+      <button class="tbtn" onclick="window.print()">Print / PDF</button>
+      <button class="tbtn" onclick="App.exportCSV()">Export CSV</button>
+    </div>
+
+    <main class="sheet" id="sheet"></main>
+    <div id="toast" role="status" aria-live="polite"></div>
+  </div>
+</div>
+
+<!-- ══ PROJECT DATA ══════════════════════════════════════════════
+     Saving to this file rewrites the block below. Everything the app
+     needs is inside it, so this single .html file is both the tool and
+     the project. Do not hand-edit it.
+     ══════════════════════════════════════════════════════════════ -->
+<script id="darkwiz-project" type="application/json">null</script>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   DARKWIZ QS — single-file estimating & cost control app
+   Standards basis: NSCP 2015 · DPWH Blue Book / Standard Pay Items
+   · RA 9184 IRR (markup) · PD 1096 NBC
+   Base units: METRIC.  Base currency: PHP.
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── 1. Persistence ────────────────────────────────────────────
+   Three layers, in order of authority:
+     1. the data block embedded in this .html file  (travels with the file)
+     2. this browser's local storage, keyed per file (survives a refresh)
+     3. the sample project                          (first run)
+   Whichever of the first two was written later wins. Local storage
+   degrades to memory if the browser blocks it, which some do on file://. */
+const Store = {
+  _m:{},
+  get(k){ try{ const v=localStorage.getItem(k); return v===null? (this._m[k] ?? null) : v; }
+          catch(e){ return this._m[k] ?? null; } },
+  set(k,v){ this._m[k]=v; try{ localStorage.setItem(k,v); }catch(e){} }
+};
+
+/* The payload written into this file the last time it was saved. */
+const EMBED = (function(){
+  try{
+    const el=document.getElementById('darkwiz-project');
+    if(!el) return null;
+    const t=(el.textContent||'').trim();
+    if(!t || t==='null') return null;
+    return JSON.parse(t);
+  }catch(e){ return null; }
+})();
+
+/* Each saved file carries its own id, so two project files opened from the
+   same folder never overwrite each other's working copy in local storage. */
+const DOC_ID = (EMBED && EMBED.__docId) || 'workspace';
+const SKEY   = 'darkwiz_qs_v3::'+DOC_ID;
+
+/* ── 2. Unit & currency engine ─────────────────────────────── */
+const UNITS = {
+  metric:{ L:{f:1,u:'m'},  A:{f:1,u:'m²'},   V:{f:1,u:'m³'},
+           M:{f:1,u:'kg'}, EA:{f:1,u:'ea'},  LS:{f:1,u:'l.s.'},
+           BAG:{f:1,u:'bag'}, LTR:{f:1,u:'L'}, PC:{f:1,u:'pc'} },
+  imperial:{ L:{f:3.280839895,u:'ft'}, A:{f:10.76391042,u:'ft²'}, V:{f:35.31466672,u:'ft³'},
+           M:{f:2.204622622,u:'lb'}, EA:{f:1,u:'ea'}, LS:{f:1,u:'l.s.'},
+           BAG:{f:1,u:'bag'}, LTR:{f:0.264172052,u:'gal'}, PC:{f:1,u:'pc'} }
+};
+const U = {
+  sys(){ return S.cfg.units; },
+  f(dim){ return (UNITS[S.cfg.units][dim]||{f:1}).f; },
+  u(dim){ return (UNITS[S.cfg.units][dim]||{u:''}).u; },
+  out(v,dim){ return (+v||0) * U.f(dim); },          // base → display
+  in(v,dim){ return (+v||0) / U.f(dim); },           // display → base
+  cur(){ return S.cfg.currency; },
+  sym(){ return S.cfg.currency==='USD' ? '$' : '₱'; },
+  fx(){ return S.cfg.currency==='USD' ? (+S.cfg.fx||58.5) : 1; },
+  money(v){ return (+v||0)/U.fx(); },                // PHP base → display currency
+  moneyIn(v){ return (+v||0)*U.fx(); }               // display → PHP base
+};
+
+/* ── 3. Formatters ─────────────────────────────────────────── */
+const F = {
+  n(v,d=2){ if(v===''||v===null||v===undefined||isNaN(v)) return '—';
+    return (+v).toLocaleString('en-PH',{minimumFractionDigits:d,maximumFractionDigits:d}); },
+  q(v,d=3){ return F.n(v,d); },
+  /* One inline-flex unit: the sign cannot wrap away from its figure. */
+  wrap(sym,txt){ return '<span class="money"><i>'+sym+'</i><b>'+txt+'</b></span>'; },
+  m(v,d=2){ return F.wrap(U.sym(),F.n(U.money(v),d)); },   // v is PHP base
+  mRaw(v,d=2){ return F.wrap(U.sym(),F.n(v,d)); },         // v already display
+  mPlain(v,d=2){ return U.sym()+' '+F.n(U.money(v),d); },  // for CSV, titles, alerts
+  pct(v,d=1){ return F.n(v,d)+'%'; },
+  short(v){ const x=U.money(v); const a=Math.abs(x); let t;
+    if(a>=1e9) t=F.n(x/1e9,2)+'B';
+    else if(a>=1e6) t=F.n(x/1e6,2)+'M';
+    else if(a>=1e3) t=F.n(x/1e3,1)+'K';
+    else t=F.n(x,0);
+    return F.wrap(U.sym(),t); },
+  esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+};
+const uid = p => p+'_'+Math.random().toString(36).slice(2,8);
+
+/* ── 4. Reference data ─────────────────────────────────────── */
+
+/* PNS 49 / NSCP 2015 deformed bar unit mass */
+const REBAR = [
+  {d:8,  w:0.395}, {d:10, w:0.616}, {d:12, w:0.888}, {d:16, w:1.578},
+  {d:20, w:2.466}, {d:25, w:3.853}, {d:28, w:4.834}, {d:32, w:6.313}, {d:36, w:7.990}
+];
+const BAR_LEN = [6.0, 7.5, 9.0, 10.5, 12.0];   // commercial lengths, m
+
+/* Reinforcing bar grades. Unit mass does not change with grade — only the
+   yield strength used in design, and usually the mill price. */
+const GRADES = [
+  {g:'33', pns:'PNS 49 Grade 230', fy:230, astm:'—',
+   afy:'—', ten:390, sizes:'10 and 12 mm', 
+   use:'Ties, stirrups and slab bars in ordinary low-rise work. Not permitted in members resisting earthquake forces.'},
+  {g:'40', pns:'PNS 49 Grade 275', fy:275, astm:'ASTM A615 Gr. 40',
+   afy:280, ten:480, sizes:'10 to 25 mm',
+   use:'General reinforcement and ordinary moment frames under NSCP 2015 §420.'},
+  {g:'60', pns:'PNS 49 Grade 415', fy:415, astm:'ASTM A615 Gr. 60',
+   afy:420, ten:620, sizes:'12 to 36 mm',
+   use:'Special moment-resisting frames and structural walls. NSCP 2015 §421 requires ASTM A706 low-alloy bar, or A615 Gr. 60 meeting the supplementary tensile and carbon-equivalent limits.'}
+];
+
+/* DPWH concrete classes — proportions by volume, quantities per 1 m³
+   derived on the standard basis of 1.00 m³ gravel + 0.50 m³ sand */
+const MIXES = [
+  {cls:'AA+', ratio:'1 : 1 : 2',     fc:27.6, psi:4000, wc:0.42, cem:18.0, sand:0.50, grav:1.00, use:'Water-retaining, marine, precast'},
+  {cls:'AA',  ratio:'1 : 1.5 : 3',   fc:24.1, psi:3500, wc:0.45, cem:12.0, sand:0.50, grav:1.00, use:'Columns, beams, suspended slabs, footings (high load)'},
+  {cls:'A',   ratio:'1 : 2 : 4',     fc:20.7, psi:3000, wc:0.53, cem: 9.0, sand:0.50, grav:1.00, use:'General structural — beams, slabs, footings, walls'},
+  {cls:'B',   ratio:'1 : 2.5 : 5',   fc:17.2, psi:2500, wc:0.58, cem: 7.2, sand:0.50, grav:1.00, use:'Non-structural slabs on grade, pedestals, curbs'},
+  {cls:'C',   ratio:'1 : 3 : 6',     fc:13.8, psi:2000, wc:0.62, cem: 6.0, sand:0.50, grav:1.00, use:'Lean concrete, footing bedding, mass fill'}
+];
+
+/* RA 9184 IRR / DPWH D.O. — indicative OCM + Profit ceilings by direct cost */
+const MARKUP_TIERS = [
+  {upto:5e6,   ocm:12, profit:10, label:'Up to ₱5 M'},
+  {upto:50e6,  ocm: 9, profit: 8, label:'Over ₱5 M to ₱50 M'},
+  {upto:150e6, ocm: 8, profit: 8, label:'Over ₱50 M to ₱150 M'},
+  {upto:1e15,  ocm: 7, profit: 8, label:'Over ₱150 M'}
+];
+
+/* Material price list — PHP base, from the firm's price books */
+const SEED_PRICES = [
+  ['Cement & aggregates','Portland cement, 40 kg','bag','BAG',245],
+  ['Cement & aggregates','Washed sand','m³','V',1400],
+  ['Cement & aggregates','Gravel 3/4"','m³','V',1500],
+  ['Cement & aggregates','Gravel bedding / base course','m³','V',1300],
+  ['Cement & aggregates','Water (delivered)','m³','V',250],
+  ['Reinforcement','Deformed bar 10 mmØ x 6 m','pc','PC',165],
+  ['Reinforcement','Deformed bar 12 mmØ x 6 m','pc','PC',235],
+  ['Reinforcement','Deformed bar 16 mmØ x 6 m','pc','PC',430],
+  ['Reinforcement','Deformed bar 20 mmØ x 6 m','pc','PC',675],
+  ['Reinforcement','Deformed bar 25 mmØ x 6 m','pc','PC',1055],
+  ['Reinforcement','Reinforcing steel (by weight)','kg','M',48],
+  ['Reinforcement','G.I. tie wire #16','kg','M',95],
+  ['Masonry','CHB 100 mm (4")','pc','PC',16],
+  ['Masonry','CHB 125 mm (5")','pc','PC',18],
+  ['Masonry','CHB 150 mm (6")','pc','PC',20],
+  ['Formworks','Phenolic board 12 mm 4x8','pc','PC',900],
+  ['Formworks','Coco lumber 2x2x10','pc','PC',110],
+  ['Formworks','Coco lumber 2x3x10','pc','PC',170],
+  ['Formworks','C.W. nails, assorted','kg','M',80],
+  ['Formworks','Form oil','L','LTR',180],
+  ['Structural steel','Tubular 2x3x1.5 mm x 6 m','pc','PC',820],
+  ['Structural steel','Tubular 2x4x2.0 mm x 6 m','pc','PC',1474],
+  ['Structural steel','Angle bar 1/4 x 2 x 2 x 6 m','pc','PC',1127],
+  ['Structural steel','C-purlins 2x3x1.5 mm x 6 m','pc','PC',508],
+  ['Structural steel','C-purlins 2x4x1.5 mm x 6 m','pc','PC',579],
+  ['Structural steel','C-purlins 2x6x1.5 mm x 6 m','pc','PC',727],
+  ['Structural steel','Sagrod 10 mmØ round bar x 6 m','pc','PC',205],
+  ['Structural steel','Welding rod E6013','kg','M',180],
+  ['Structural steel','Cutting disc 14"','pc','PC',300],
+  ['Structural steel','Structural steel (fabricated, by weight)','kg','M',95],
+  ['Roofing','Pre-painted rib-type sheet 0.5 mm','l.m.','L',480],
+  ['Roofing','Corrugated G.I. sheet 0.5 mm','l.m.','L',380],
+  ['Roofing','G.I. gutter 0.5 mm, with design','l.m.','L',550],
+  ['Roofing','G.I. flashing 0.5 mm','l.m.','L',550],
+  ['Roofing','G.I. ridge roll 0.5 mm','l.m.','L',550],
+  ['Roofing','Tekscrew 1-1/2"','pc','PC',2],
+  ['Roofing','Vulcaseal','L','LTR',550],
+  ['Ceiling & drywall','Gypsum board 12 mm 4x8','pc','PC',598],
+  ['Ceiling & drywall','Fiber cement board 6 mm 4x8','pc','PC',580],
+  ['Ceiling & drywall','Metal furring 0.6 mm x 5 m','pc','PC',148],
+  ['Ceiling & drywall','Carrying channel x 5 m','pc','PC',197],
+  ['Ceiling & drywall','Wall angle x 3 m','pc','PC',91],
+  ['Ceiling & drywall','W-clip','pc','PC',10],
+  ['Ceiling & drywall','Metal stud 2x3 x 3 m','pc','PC',275],
+  ['Ceiling & drywall','Metal track 2x3 x 3 m','pc','PC',275],
+  ['Ceiling & drywall','Joint compound','pail','PC',125],
+  ['Ceiling & drywall','Mesh tape 250 ft','roll','PC',150],
+  ['Ceiling & drywall','Blind rivet 1/8"','pc','PC',2],
+  ['Tiling','Ceramic tile 600x600','pc','PC',195],
+  ['Tiling','Porcelain tile 600x600','pc','PC',320],
+  ['Tiling','Granite tile 600x600','pc','PC',320],
+  ['Tiling','Tile adhesive, 25 kg','bag','BAG',550],
+  ['Tiling','Tile grout','pack','PC',65],
+  ['Painting','Latex paint, semi-gloss','L','LTR',180],
+  ['Painting','Masonry neutralizer','L','LTR',120],
+  ['Painting','Skim coat / putty, 25 kg','bag','BAG',480],
+  ['Painting','QDE / metal primer','L','LTR',220],
+  ['Doors & windows','Hollow-core flush door, incl. jamb','m²','A',2292],
+  ['Doors & windows','Wooden panel door, heavy-duty','m²','A',3143],
+  ['Doors & windows','PVC door with frame','m²','A',2083],
+  ['Doors & windows','Analok sliding glass door/window','m²','A',4000],
+  ['Electrical','PVC conduit 20 mmØ x 3 m','pc','PC',49.5],
+  ['Electrical','Junction / utility box','pc','PC',49.5],
+  ['Electrical','THHN wire 3.5 mm²','m','L',31.9],
+  ['Electrical','Duplex convenience outlet','set','PC',253],
+  ['Electrical','Panel board with main breaker','set','PC',6656],
+  ['Electrical','LED lighting fixture','set','PC',198],
+  ['Plumbing','Sanitary PVC pipe 100 mmØ x 3 m','pc','PC',495],
+  ['Plumbing','PPR pipe 20 mmØ x 4 m','pc','PC',330],
+  ['Plumbing','Water closet with complete accessories','set','PC',6600],
+  ['Plumbing','Lavatory, counter-type','set','PC',3850],
+  ['Plumbing','Kitchen sink, stainless','set','PC',4950],
+  ['Plumbing','Floor drain','set','PC',385]
+];
+
+/* DUPA library — unit direct costs (PHP) taken from the firm's
+   Detailed Unit Price Analysis workbooks. Labour / equipment / material
+   are per one unit of the pay item. Verify against current market. */
+const SEED_DUPA = [
+  ['B.5','Project billboard / signboard','ea','EA',1200.00,0,4800.00],
+  ['B.7(1)','Occupational safety and health programme','l.s.','LS',18000.00,2500.00,26000.00],
+  ['B.7(2)','Personal protective equipment','ea','EA',0,0,1850.00],
+  ['B.9','Mobilisation and demobilisation','l.s.','LS',22000.00,48000.00,12000.00],
+  ['GP-01','Temporary field office and storage','m²','A',1450.00,180.00,3200.00],
+  ['GP-02','Temporary bunkhouse / barracks','m²','A',1250.00,150.00,2800.00],
+  ['GP-03','Temporary water and power service','l.s.','LS',6500.00,0,24000.00],
+  ['GP-04','Temporary fence and site enclosure','m','L',285.00,32.00,690.00],
+  ['GP-05','Site preparation, layout and staking','m²','A',16.00,2.50,4.00],
+  ['GP-06','Surety and performance bond','l.s.','LS',0,0,0],
+  ['GP-07','Contractor\u2019s all-risk insurance (CARI)','l.s.','LS',0,0,0],
+  ['GP-08','Permits, clearances and licences','l.s.','LS',0,0,0],
+  ['GP-09','As-built plans and project documentation','l.s.','LS',14000.00,0,6500.00],
+  ['GP-10','Site clean-up and final turnover','m²','A',22.00,4.50,3.00],
+  ['800(1)','Clearing and grubbing','m²','A',6.00,215.55,0],
+  ['800(3)a','Individual removal of trees','ea','EA',275.00,1954.47,0],
+  ['803(1)a','Structure excavation — common soil','m³','V',12.50,213.30,0],
+  ['803(1)b','Structure excavation — soft rock','m³','V',17.86,323.93,0],
+  ['804(1)','Embankment / backfill from excavation','m³','V',95.00,110.00,0],
+  ['804(4)','Gravel bedding','m³','V',208.33,225.83,1400.00],
+  ['900(1)c2','Structural concrete for footing (Class A)','m³','V',1050.42,586.83,4511.50],
+  ['900(1)','Structural concrete — beams, columns, slab','m³','V',1388.89,775.93,4211.50],
+  ['902(1)a','Reinforcing steel — 1 storey','kg','M',6.45,3.14,80.17],
+  ['902(1)b','Reinforcing steel — 2 to 5 storeys','kg','M',7.17,2.93,80.17],
+  ['903(2)','Formworks and falseworks','m²','A',189.51,18.95,605.04],
+  ['1046(1)','100 mm CHB laying, incl. reinforcement','m²','A',104.58,55.43,637.63],
+  ['1046(2)','150 mm CHB laying, incl. reinforcement','m²','A',125.79,66.67,935.00],
+  ['1027(1)','Cement plaster finish, 16 mm','m²','A',63.16,6.32,136.05],
+  ['1047(2)b','Structural steel roof truss','kg','M',6.28,14.00,158.87],
+  ['1047(2)c','Structural steel purlins','kg','M',4.98,4.48,80.54],
+  ['1013(1)','Corrugated metal roofing','m²','A',132.47,13.25,412.02],
+  ['1013(2)a','Metal roofing accessory — ridge / flashing / valley','m','L',22.50,2.25,214.93],
+  ['1013(2)b','Metal roofing accessory — gutter','m','L',19.07,1.91,226.26],
+  ['1014(1)','Pre-painted metal sheets — corrugated','m²','A',132.46,13.25,397.58],
+  ['1014(2)','Pre-painted metal sheets — rib type','m²','A',99.31,9.93,381.10],
+  ['1016(1)a','Waterproofing, cement-based','m²','A',120.00,12.00,53.02],
+  ['1018(1)','Unglazed / granite / ceramic tile works','m²','A',371.79,37.18,881.28],
+  ['1003(1)','Fiber cement board / marine plywood ceiling','m²','A',221.24,22.12,967.60],
+  ['1003(2)','Gypsum board ceiling on metal frame','m²','A',210.00,21.00,845.00],
+  ['1003(3)','Acoustic panel ceiling on T-runner','m²','A',185.00,18.50,720.00],
+  ['1003(4)','PVC ceiling panel','m²','A',195.00,19.50,660.00],
+  ['1051(1)','Drywall partition — gypsum, both faces','m²','A',285.00,28.50,1180.00],
+  ['1051(2)','Drywall partition — fiber cement, both faces','m²','A',298.00,29.80,1265.00],
+  ['1051(3)','Metal furring and stud framing only','m²','A',165.00,16.50,520.00],
+  ['1018(2)','Ceramic tile — wall','m²','A',385.00,38.50,760.00],
+  ['1018(3)','Porcelain / homogeneous tile — floor','m²','A',395.00,39.50,1080.00],
+  ['1018(4)','Tile skirting and trim','m','L',125.00,12.50,190.00],
+  ['1021(1)','Cement floor finish, plain / trowelled','m²','A',148.00,14.80,185.00],
+  ['1010(2)a','Hollow-core flush door','m²','A',703.13,70.31,2291.67],
+  ['1010(2)b','Wooden panel door, heavy-duty','m²','A',763.89,76.39,3142.86],
+  ['1043(1)','PVC door and frame','m²','A',714.29,71.43,2083.33],
+  ['1010(1)','Steel door and frame, painted','m²','A',780.00,78.00,3850.00],
+  ['1010(3)','Door hardware — lockset, hinges and closer','set','EA',420.00,0,1850.00],
+  ['1012(1)','Aluminium framed door with glass','m²','A',687.50,68.75,4200.00],
+  ['1032(1)a','Painting works — masonry, primer and two coats','m²','A',142.86,0,144.74],
+  ['1032(1)b','Painting works — wood, primer and two coats','m²','A',150.00,0,320.00],
+  ['1032(1)c','Painting works — metal, red oxide and QDE','m²','A',150.00,0,498.03],
+  ['1032(1)d','Painting works — epoxy floor coating','m²','A',185.00,18.50,620.00],
+  ['1032(2)','Surface preparation — skim coat and putty','m²','A',95.00,0,86.00],
+  ['1032(3)','Elastomeric / textured wall finish','m²','A',165.00,0,395.00],
+  ['SPL-01','Analok sliding glass door / window','m²','A',0,0,4000.00],
+  ['1008(1)','Aluminium framed glass window — sliding','m²','A',562.50,56.25,3400.00],
+  ['1008(2)','Aluminium framed glass door','m²','A',687.50,68.75,4200.00],
+  ['1009(1)','Fixed glass panel on aluminium frame','m²','A',480.00,48.00,2850.00],
+  ['SPL-G1','Tempered glass partition, 12 mm, with fittings','m²','A',850.00,85.00,5600.00],
+  ['SPL-G2','Glass railing with stainless fittings','m','L',1250.00,125.00,7800.00],
+  ['SPL-G3','Mirror or glass cladding on backing','m²','A',562.50,56.25,1450.00],
+  ['SPL-A1','Stainless steel railing and balusters','m','L',1450.00,145.00,4800.00],
+  ['SPL-A2','Wrought iron / steel railing, painted','m','L',980.00,98.00,2650.00],
+  ['SPL-A3','Wall cladding — stone or PVC on backing','m²','A',385.00,38.50,1720.00],
+  ['SPL-A4','Decorative wall panel or feature finish','m²','A',420.00,42.00,1950.00],
+  ['SPL-A5','Signage, sticker and vinyl graphics','m²','A',350.00,0,1250.00],
+  ['SPL-A6','Wallpaper application','m²','A',185.00,0,1080.00],
+  ['SPL-A7','Cabinetry and built-in millwork','m','L',2400.00,240.00,7800.00],
+  ['SPL-A8','Cornice, moulding and trim works','m','L',165.00,16.50,420.00],
+  ['SPL-E1','Waterproofing — liquid membrane system','m²','A',148.00,14.80,395.00],
+  ['SPL-E2','Thermal or acoustic insulation','m²','A',95.00,9.50,320.00],
+  ['SPL-E3','Expansion joint and sealant treatment','m','L',225.00,22.50,580.00],
+  ['SPL-E4','Epoxy grouting and concrete repair','m','L',380.00,38.00,720.00],
+  ['SPL-E5','Termite and soil poisoning treatment','m²','A',18.00,1.80,42.00],
+  ['SPL-E6','Anti-corrosion coating on embedded steel','m²','A',165.00,16.50,455.00],
+  ['SPL-E7','Structural crack injection','m','L',420.00,42.00,860.00],
+  ['1047(1)','Structural steel — miscellaneous roof framing','kg','M',7.50,12.00,105.00],
+  ['SPL-R1','Sagrods, turnbuckles and cross bracing','kg','M',6.80,9.50,118.00],
+  ['SPL-R2','Steel deck / ceiling joist framing','kg','M',6.20,8.40,98.00],
+  ['1001(1)a','Sanitary PVC pipe 50–100 mmØ','m','L',91.67,9.17,165.00],
+  ['1002(6)','Waterline pipes and fittings','l.s.','LS',2200.00,220.00,2780.00],
+  ['1002(5)a','Water closet with complete accessories','set','EA',450.00,45.00,6600.00],
+  ['1002(5)b','Kitchen / scrub / slop sink','set','EA',450.00,45.00,4950.00],
+  ['1002(5)c','Lavatory — wall hung / countertop','set','EA',450.00,45.00,3850.00],
+  ['1002(5)h','Floor drain plate','set','EA',90.00,9.00,385.00],
+  ['1002(5)k','Soap holder / tissue holder','set','EA',168.75,16.88,385.00],
+  ['1002(5)p','Facial mirror','m²','A',562.50,56.25,990.00],
+  ['1100(1)','Flexible conduit 15–25 mmØ','m','L',63.67,6.37,16.50],
+  ['1100(2)','Junction / utility / square box','pc','EA',90.00,9.00,49.50],
+  ['1101(2)','Electric wire 1.6–5.5 mm²','m','L',9.00,0.90,31.90],
+  ['1101(3)a','Single convenience outlet','set','EA',56.25,0,198.00],
+  ['1101(3)b','Duplex convenience outlet','set','EA',67.50,0,253.00],
+  ['1102(1)','Panel board with main breaker','set','EA',1512.50,0,6656.00],
+  ['1103(2)','Lighting fixture with lamp','set','EA',225.00,22.50,198.00]
+];
+
+/* Material coefficients per unit of finished work — editable */
+const SEED_COEF = [
+  {id:'conc_AA', name:'Concrete Class AA (1:1.5:3)', drv:'m³', items:[
+    ['Portland cement, 40 kg',12.0],['Washed sand',0.50],['Gravel 3/4"',1.00]]},
+  {id:'conc_A', name:'Concrete Class A (1:2:4)', drv:'m³', items:[
+    ['Portland cement, 40 kg',9.0],['Washed sand',0.50],['Gravel 3/4"',1.00]]},
+  {id:'conc_B', name:'Concrete Class B (1:2.5:5)', drv:'m³', items:[
+    ['Portland cement, 40 kg',7.2],['Washed sand',0.50],['Gravel 3/4"',1.00]]},
+  {id:'conc_C', name:'Concrete Class C (1:3:6)', drv:'m³', items:[
+    ['Portland cement, 40 kg',6.0],['Washed sand',0.50],['Gravel 3/4"',1.00]]},
+  {id:'form_ply', name:'Formworks — phenolic, 3 reuses', drv:'m²', items:[
+    ['Phenolic board 12 mm 4x8',0.11],['Coco lumber 2x2x10',0.65],['C.W. nails, assorted',0.14],['Form oil',0.05]]},
+  {id:'chb100', name:'CHB 100 mm laying + mortar', drv:'m²', items:[
+    ['CHB 100 mm (4")',12.5],['Portland cement, 40 kg',0.522],['Washed sand',0.0435],
+    ['Reinforcing steel (by weight)',3.0],['G.I. tie wire #16',0.05]]},
+  {id:'chb150', name:'CHB 150 mm laying + mortar', drv:'m²', items:[
+    ['CHB 150 mm (6")',12.5],['Portland cement, 40 kg',0.783],['Washed sand',0.0652],
+    ['Reinforcing steel (by weight)',4.2],['G.I. tie wire #16',0.06]]},
+  {id:'plaster', name:'Cement plaster 16 mm, one face', drv:'m²', items:[
+    ['Portland cement, 40 kg',0.30],['Washed sand',0.020]]},
+  {id:'tile600', name:'Floor / wall tile 600x600', drv:'m²', items:[
+    ['Ceramic tile 600x600',2.9],['Tile adhesive, 25 kg',0.22],['Tile grout',0.20]]},
+  {id:'ceil_fcb', name:'Ceiling — fiber cement on metal frame', drv:'m²', items:[
+    ['Fiber cement board 6 mm 4x8',0.38],['Metal furring 0.6 mm x 5 m',0.75],
+    ['Carrying channel x 5 m',0.28],['Wall angle x 3 m',0.20],['W-clip',2.4],['Blind rivet 1/8"',12]]},
+  {id:'dry_gyp', name:'Drywall partition — gypsum both faces', drv:'m²', items:[
+    ['Gypsum board 12 mm 4x8',0.76],['Metal stud 2x3 x 3 m',1.10],['Metal track 2x3 x 3 m',0.45],
+    ['Joint compound',0.12],['Mesh tape 250 ft',0.05]]},
+  {id:'paint_mas', name:'Painting — masonry, primer + 2 coats', drv:'m²', items:[
+    ['Masonry neutralizer',0.06],['Skim coat / putty, 25 kg',0.05],['Latex paint, semi-gloss',0.28]]},
+  {id:'roof_rib', name:'Roofing — pre-painted rib type', drv:'m²', items:[
+    ['Pre-painted rib-type sheet 0.5 mm',1.05],['Tekscrew 1-1/2"',8],['Vulcaseal',0.03]]}
+];
+
+/* Labour productivity (3-worker crew, average output) — from the
+   Productivity Rate workbook. Output per hour, metric. */
+const PRODUCTIVITY = [
+  ['Formworks','Wall on the ground',0.500,'m²/hr'],
+  ['Formworks','Wall above ground',0.426,'m²/hr'],
+  ['Formworks','Beams',0.325,'m²/hr'],
+  ['Formworks','Columns',0.426,'m²/hr'],
+  ['Formworks','Suspended slab, 0–18 ft',0.599,'m²/hr'],
+  ['Formworks','Suspended slab, 18–36 ft',0.300,'m²/hr'],
+  ['Formworks','Fabrication of forms',0.926,'m²/hr'],
+  ['Stripping','Wall on ground',4.000,'m²/hr'],
+  ['Stripping','Beams',0.971,'m²/hr'],
+  ['Stripping','Columns',1.176,'m²/hr'],
+  ['Stripping','Suspended slab, 0–18 ft',1.205,'m²/hr'],
+  ['Carpentry','Ceiling frame installation',0.752,'m²/hr'],
+  ['Carpentry','Plywood / board installation',1.000,'m²/hr'],
+  ['Carpentry','Wood wall partition',2.000,'m²/hr'],
+  ['Doors & windows','Aluminium frame window',0.100,'ea/hr'],
+  ['Doors & windows','Sliding glass door',0.083,'ea/hr'],
+  ['Doors & windows','Steel window installation',0.500,'ea/hr'],
+  ['Doors & windows','Fixed glass',0.321,'m²/hr']
+];
+
+/* PAKYAWAN (subcontract labour) guide — PHP per unit */
+const PAKYAW = [
+  ['Earthworks','Site clearing / removal of debris',25,'m²'],
+  ['Earthworks','Layout and staking',15,'m²'],
+  ['Earthworks','Excavation works',175,'m³'],
+  ['Earthworks','Gravel bedding',200,'m³'],
+  ['Earthworks','Backfilling',95,'m³'],
+  ['Earthworks','Earthfill and compaction',200,'m³'],
+  ['Earthworks','Soil poisoning',25,'gal'],
+  ['Structural','Concrete 4,500 psi — pouring',1250,'m³'],
+  ['Structural','Concrete 3,000 psi — pouring',1100,'m³'],
+  ['Structural','Reinforcing bars — cut, bend, install',7.5,'kg'],
+  ['Structural','Formworks — fabricate and install',200,'pc'],
+  ['Structural','Tie wire works',350,'roll'],
+  ['Masonry','CHB laying 100 mm',180,'m²'],
+  ['Masonry','CHB laying 150 mm',210,'m²'],
+  ['Masonry','Cement plaster finish',120,'m²'],
+  ['Architectural','Ceiling installation',180,'m²'],
+  ['Architectural','Tile installation',250,'m²'],
+  ['Architectural','Painting works',110,'m²'],
+  ['Roofing','Roof sheet installation',150,'m²'],
+  ['Roofing','Trusses and purlins fabrication',12,'kg']
+];
+
+/* ── 5. Application state ──────────────────────────────────── */
+const MEAS = {
+  V :{lbl:'Volume  L×W×H×N',   dim:'V',  need:['l','w','h','n']},
+  A :{lbl:'Area  L×W×N',       dim:'A',  need:['l','w','n']},
+  L :{lbl:'Length  L×N',       dim:'L',  need:['l','n']},
+  EA:{lbl:'Count  N',          dim:'EA', need:['n']},
+  M :{lbl:'Mass  (direct kg)', dim:'M',  need:['n']},
+  LS:{lbl:'Lump sum',          dim:'LS', need:['n']}
+};
+
+const DEFAULT_SCOPES = [
+  {id:'genprep',code:'B / GP',   name:'General preparation',
+   note:'Everything before a shovel moves — mobilisation, bonds and insurances, permits, temporary facilities, safety programme, signboards and final clean-up.'},
+  {id:'earth', code:'800-804',  name:'Earthworks',
+   note:'Clearing, structure excavation, backfill, gravel bedding and soil poisoning. Set the measurement mode per line.'},
+  {id:'conc',  code:'900',      name:'Concreting Works',
+   note:'Volumes by structural element. Link each line to a mix class so the bill of materials can explode cement, sand and gravel.'},
+  {id:'form',  code:'903',      name:'Formworks & scaffolding',
+   note:'Contact area of forms plus falsework. The reuse factor lives in the material coefficient set, not here.'},
+  {id:'mas',   code:'1046-1027',name:'Masonry & plaster',
+   note:'Wall areas by CHB thickness. Deduct openings as negative lines or with the factor column.'},
+  {id:'roof',  code:'1013-1047',name:'Roofing Works',
+   note:'Roof sheets and accessories together with the framing that carries them — trusses, purlins, sagrods and bracing, scheduled by member on this sheet.'},
+  {id:'dryceil',code:'1003-1051',name:'Drywall and ceiling works',
+   note:'Suspended and applied ceilings, drywall partitions, and the metal furring or stud framing behind them.'},
+  {id:'tile',  code:'1018-1021',name:'Tiling works',
+   note:'Floor and wall tiling, skirting and trim, and cement floor finishes.'},
+  {id:'glass', code:'1008-1043',name:'Windows, glass and doors',
+   note:'Every opening — aluminium and analok windows, fixed and tempered glass, glass railings, mirrors, and all door types with their hardware.'},
+  {id:'paint', code:'1032',     name:'Painting works',
+   note:'Every painting pay item — masonry, wood, metal, epoxy floor coating, surface preparation and textured finishes.'},
+  {id:'arch',  code:'SPL-A',    name:'Architectural finishes',
+   note:'Applied and decorative work — railings and balusters, cladding, feature panels, signage and stickers, wallpaper, cabinetry, cornices and trim.'},
+  {id:'engfin',code:'SPL-E',    name:'Engineering finishes',
+   note:'Remedial and protective solutions — waterproofing systems, insulation, expansion joints, epoxy grouting, crack injection, anti-corrosion coating and soil treatment.'},
+  {id:'plumb', code:'1001-1002',name:'Plumbing works',
+   note:'Sanitary and waterline runs, fixtures, fittings and sanitary accessories.'},
+  {id:'elec',  code:'1100-1103',name:'Electrical works',
+   note:'Conduits, wiring, wiring devices, panel boards and every lighting fixture pay item.'},
+  {id:'roads', code:'100-600',  name:'Roads & drainage',
+   note:'DPWH road and drainage items — sub-base, base course, PCCP, RC pipe culverts, grouted riprap and slope protection.'}
+];
+
+const DEF_ROWS = {
+  genprep:[
+    ['Mobilisation and demobilisation','B.9','LS',0,0,0,1,1],
+    ['Project billboard','B.5','EA',0,0,0,2,1],
+    ['Occupational safety and health programme','B.7(1)','LS',0,0,0,1,1],
+    ['Personal protective equipment','B.7(2)','EA',0,0,0,24,1],
+    ['Temporary field office and storage','GP-01','A',6.0,4.0,0,1,1],
+    ['Temporary bunkhouse','GP-02','A',8.0,4.0,0,1,1],
+    ['Temporary water and power service','GP-03','LS',0,0,0,1,1],
+    ['Temporary fence and site enclosure','GP-04','L',70,0,0,1,1],
+    ['Site preparation, layout and staking','GP-05','A',20,15,0,1,1],
+    ['Surety and performance bond','GP-06','LS',0,0,0,1,1],
+    ['Contractor\u2019s all-risk insurance','GP-07','LS',0,0,0,1,1],
+    ['Permits and clearances','GP-08','LS',0,0,0,1,1],
+    ['As-built plans and documentation','GP-09','LS',0,0,0,1,1],
+    ['Site clean-up and final turnover','GP-10','A',20,15,0,1,1]],
+  earth:[
+    ['Clearing and grubbing','800(1)','A',20,15,0,1,1],
+    ['Structure excavation — footings','803(1)a','V',1.8,1.8,1.5,12,1.1],
+    ['Gravel bedding, 50 mm','804(4)','V',1.8,1.8,0.05,12,1.05],
+    ['Backfill and compaction','804(1)','V',20,15,0.3,1,1]],
+  conc:[
+    ['Footing F-1, 1.8 x 1.8 x 0.40','900(1)c2','V',1.8,1.8,0.40,12,1.03],
+    ['Column C-1, 0.40 x 0.40 x 3.20','900(1)','V',0.40,0.40,3.20,12,1.03],
+    ['Beam B-1, 0.30 x 0.50','900(1)','V',0.30,0.50,1,96,1.03],
+    ['Suspended slab, 125 mm','900(1)','V',20,15,0.125,1,1.03]],
+  form:[
+    ['Footing side forms','903(2)','A',7.2,0.40,0,12,1],
+    ['Column forms','903(2)','A',1.60,3.20,0,12,1],
+    ['Beam forms — sides and soffit','903(2)','A',1.30,4.0,0,24,1],
+    ['Slab soffit forms','903(2)','A',20,15,0,1,1]],
+  mas:[
+    ['Exterior wall — CHB 150 mm','1046(2)','A',70,3.0,0,1,1],
+    ['Interior partition — CHB 100 mm','1046(1)','A',48,3.0,0,1,1],
+    ['Deduct door and window openings','1046(1)','A',-2.1,2.4,0,6,1],
+    ['Cement plaster finish, both faces','1027(1)','A',118,3.0,0,2,1]],
+  roof:[
+    ['Pre-painted rib-type roofing','1014(2)','A',21,8.5,0,2,1.10],
+    ['Ridge roll','1013(2)a','L',21,0,0,1,1.05],
+    ['Gutter','1013(2)b','L',21,0,0,2,1.05],
+    ['Top chord — tubular 2x3x1.5, 14 @ 6.40 m','1047(2)b','M',0,0,0,460.5,1.05],
+    ['Bottom chord — tubular 2x3x1.5, 7 @ 8.00 m','1047(2)b','M',0,0,0,287.8,1.05],
+    ['Web members — tubular 2x2x1.2, 84 @ 1.20 m','1047(2)b','M',0,0,0,338.7,1.05],
+    ['C-purlins 2x4x1.5, 60 @ 6.00 m','1047(2)c','M',0,0,0,1764.0,1.05],
+    ['Sagrod 10 mmØ with turnbuckle, 96 @ 1.20 m','SPL-R1','M',0,0,0,71.0,1.05],
+    ['Gable and eave bracing','1047(1)','M',0,0,0,129.0,1.05]],
+  dryceil:[
+    ['Ceiling — fiber cement board','1003(1)','A',20,15,0,1,1.05],
+    ['Ceiling — gypsum board, dry areas','1003(2)','A',12,8,0,1,1.05],
+    ['Drywall partition — gypsum, both faces','1051(1)','A',24,3.0,0,1,1.05],
+    ['Drywall partition — fiber cement, wet areas','1051(2)','A',9.6,3.0,0,1,1.05]],
+  tile:[
+    ['Floor tile 600 x 600','1018(3)','A',20,15,0,1,1.08],
+    ['Wall tile — toilet and kitchen','1018(2)','A',3.2,2.4,0,5,1.08],
+    ['Tile skirting','1018(4)','L',86,0,0,1,1.05],
+    ['Cement floor finish — service area','1021(1)','A',4.0,3.0,0,1,1.05]],
+  glass:[
+    ['Analok sliding window, 1.50 x 1.20','SPL-01','A',1.50,1.20,0,8,1],
+    ['Aluminium framed sliding window, 1.20 x 1.20','1008(1)','A',1.20,1.20,0,6,1],
+    ['Aluminium framed glass door, 1.80 x 2.10','1008(2)','A',1.80,2.10,0,1,1],
+    ['Fixed glass panel — stairwell','1009(1)','A',1.20,2.40,0,2,1],
+    ['Glass railing — balcony','SPL-G2','L',6.0,0,0,2,1],
+    ['Mirror on toilet backing','SPL-G3','A',0.80,1.00,0,4,1],
+    ['Hollow-core flush door, 0.90 x 2.10','1010(2)a','A',0.90,2.10,0,6,1],
+    ['PVC door, 0.70 x 2.10 — toilets','1043(1)','A',0.70,2.10,0,4,1],
+    ['Door hardware set','1010(3)','EA',0,0,0,10,1]],
+  paint:[
+    ['Surface preparation — skim coat and putty','1032(2)','A',118,3.0,0,2,1],
+    ['Painting — interior masonry','1032(1)a','A',118,3.0,0,2,1],
+    ['Painting — exterior masonry','1032(1)a','A',70,3.0,0,1,1],
+    ['Painting — ceiling','1032(1)a','A',20,15,0,1,1],
+    ['Painting — wood, doors and jambs','1032(1)b','A',0.90,2.10,0,12,1],
+    ['Painting — metal, railings and grilles','1032(1)c','A',24,1.1,0,1,1]],
+  arch:[
+    ['Stainless railing — stairs and balcony','SPL-A1','L',12,0,0,1,1],
+    ['Stone cladding — feature wall','SPL-A3','A',4.0,3.0,0,1,1.05],
+    ['Cornice and moulding trim','SPL-A8','L',86,0,0,1,1.05],
+    ['Signage and vinyl graphics','SPL-A5','A',1.2,0.6,0,3,1],
+    ['Kitchen cabinetry and millwork','SPL-A7','L',4.5,0,0,1,1]],
+  engfin:[
+    ['Waterproofing — cement based, toilets','1016(1)a','A',3.2,2.4,0,5,1.05],
+    ['Waterproofing — liquid membrane, roof deck','SPL-E1','A',20,15,0,1,1.05],
+    ['Expansion joint and sealant treatment','SPL-E3','L',30,0,0,1,1],
+    ['Termite and soil poisoning treatment','SPL-E5','A',20,15,0,1,1]],
+  plumb:[
+    ['Sanitary PVC pipe 100 mmØ','1001(1)a','L',6,0,0,14,1.05],
+    ['Waterline pipes and fittings','1002(6)','LS',0,0,0,1,1],
+    ['Water closet with accessories','1002(5)a','EA',0,0,0,4,1],
+    ['Lavatory, counter-type','1002(5)c','EA',0,0,0,4,1],
+    ['Kitchen sink, stainless','1002(5)b','EA',0,0,0,1,1],
+    ['Floor drain','1002(5)h','EA',0,0,0,6,1],
+    ['Soap and tissue holder set','1002(5)k','EA',0,0,0,4,1]],
+  elec:[
+    ['Electrical conduit 20 mmØ','1100(1)','L',3,0,0,90,1.05],
+    ['Junction and utility boxes','1100(2)','EA',0,0,0,62,1],
+    ['Electric wire 3.5 mm²','1101(2)','L',1,0,0,620,1.05],
+    ['Single convenience outlet','1101(3)a','EA',0,0,0,10,1],
+    ['Duplex convenience outlet','1101(3)b','EA',0,0,0,28,1],
+    ['Panel board with main breaker','1102(1)','EA',0,0,0,2,1],
+    ['Lighting fixture — LED downlight','1103(2)','EA',0,0,0,34,1],
+    ['Lighting fixture — exterior wall lamp','1103(2)','EA',0,0,0,8,1]],
+  roads:[
+    ['Aggregate sub-base course','804(4)','V',100,6.0,0.20,1,1.05],
+    ['Structure excavation for drainage','803(1)a','V',60,1.2,1.0,1,1.1],
+    ['Grouted riprap, Class A','900(1)','V',40,0.5,1.5,1,1.05]]
+};
+
+const BASIS_MAP = {
+  '900(1)c2':'conc_A','900(1)':'conc_A','903(2)':'form_ply',
+  '1046(1)':'chb100','1046(2)':'chb150','1027(1)':'plaster',
+  '1018(1)':'tile600','1018(2)':'tile600','1018(3)':'tile600',
+  '1003(1)':'ceil_fcb','1003(2)':'ceil_fcb','1051(1)':'dry_gyp','1051(2)':'dry_gyp',
+  '1032(1)a':'paint_mas','1014(2)':'roof_rib','1014(1)':'roof_rib'
+};
+
+function seedState(){
+  const prices = SEED_PRICES.map(p=>({id:uid('p'),cat:p[0],name:p[1],unit:p[2],dim:p[3],rate:p[4]}));
+  const dupa = SEED_DUPA.map(d=>({id:uid('d'),item:d[0],desc:d[1],unit:d[2],dim:d[3],
+                                  lab:d[4],eqp:d[5],mat:d[6],on:true}));
+  const scopes = JSON.parse(JSON.stringify(DEFAULT_SCOPES));
+  const take={};
+  scopes.forEach(s=>{
+    take[s.id]=(DEF_ROWS[s.id]||[]).map(r=>({
+      id:uid('t'),desc:r[0],pay:r[1],mode:r[2],l:r[3],w:r[4],h:r[5],n:r[6],f:r[7],
+      basis:BASIS_MAP[r[1]]||''
+    }));
+  });
+  return {
+    meta:{ name:'Proposed Two-Storey Residential Building', loc:'Quezon City, Metro Manila',
+           client:'Private Owner', prep:'Engr. Gemz', chk:'Engr. R. Santos',
+           date:new Date().toISOString().slice(0,10), rev:'0', ref:'DARKWIZ-EST-001',
+           storeys:2 },
+    cfg:{ units:'metric', currency:'PHP', fx:58.50, ocm:9, profit:8, vat:5,
+          contingency:0, mode:'dupa' },
+    ui:{ qtoBy:'item', qtoQ:'', qtoSort:'item', qtoDir:'asc', qtoSrc:'',
+         bomQ:'', bomSort:'amt', bomDir:'desc', dupaQ:'', priceQ:'', priceCats:[],
+         rail:true, newCat:null, _focus:null },
+    scopes, prices, dupa, coef:JSON.parse(JSON.stringify(SEED_COEF)), take,
+    rebar:[
+      {id:uid('r'),el:'Footing F-1',pay:'',gr:'40',d:16,len:1.70,nb:8,n:12,lap:1.05},
+      {id:uid('r'),el:'Column C-1 main bars',pay:'',gr:'60',d:20,len:3.60,nb:8,n:12,lap:1.08},
+      {id:uid('r'),el:'Column C-1 ties',pay:'',gr:'33',d:10,len:1.45,nb:22,n:12,lap:1.05},
+      {id:uid('r'),el:'Beam B-1 main bars',pay:'',gr:'60',d:16,len:4.20,nb:6,n:24,lap:1.08},
+      {id:uid('r'),el:'Beam B-1 stirrups',pay:'',gr:'33',d:10,len:1.50,nb:18,n:24,lap:1.05},
+      {id:uid('r'),el:'Slab bars, both ways',pay:'',gr:'40',d:12,len:5.00,nb:120,n:2,lap:1.05}
+    ],
+    mix:{ cem:1, sand:2, grav:4, vol:10, wc:0.53, dry:1.75, waste:5 },
+    cc:[
+      {id:uid('c'),el:'Materials',bud:0,act:2850000,com:1250000},
+      {id:uid('c'),el:'Labour',bud:0,act:1180000,com:340000},
+      {id:uid('c'),el:'Equipment',bud:0,act:410000,com:120000},
+      {id:uid('c'),el:'Subcontracts',bud:0,act:960000,com:1450000},
+      {id:uid('c'),el:'Site overhead',bud:0,act:280000,com:65000}
+    ],
+    bill:{ no:3, from:'', to:'', ret:10, adv:15, advOn:true, prev:{}, now:{} },
+    port:[
+      {id:uid('j'),code:'PJ-2401',name:'Residential — Antipolo',   ctr:18500000, bld:9250000,  cost:7900000,  st:'Ongoing'},
+      {id:uid('j'),code:'PJ-2402',name:'Warehouse — Calamba',      ctr:46200000, bld:32340000, cost:29100000, st:'Ongoing'},
+      {id:uid('j'),code:'PJ-2403',name:'Barangay road — Rizal',    ctr:12800000, bld:12800000, cost:10650000, st:'Completed'},
+      {id:uid('j'),code:'PJ-2404',name:'Commercial fit-out — BGC', ctr:9600000,  bld:2880000,  cost:2610000,  st:'Ongoing'},
+      {id:uid('j'),code:'PJ-2405',name:'Drainage — Laguna',        ctr:24300000, bld:6075000,  cost:5820000,  st:'Ongoing'}
+    ]
+  };
+}
+
+/* Bring a file or a stored state written by an earlier version up to date. */
+const RE_ELEC   = /^11\d\d/;
+const RE_CEIL   = /^(1003|1051)/;
+const RE_TILE   = /^(1018|1021)/;
+const RE_OPEN   = /^(1008|1009|1010|1012|1043)|^SPL-(01|G\d)/;
+const RE_ENGFIN = /^(1016)|^SPL-E\d/;
+const RE_ROOFST = /^1047|^SPL-R\d/;
+
+function reroute(o){
+  /* Pull lines out of whichever sheet they sit on and re-file them by pay item.
+     Only moves a line when its pay item clearly belongs elsewhere, so anything
+     the person has customised on a sheet of their own is left alone. */
+  const rules=[
+    ['dryceil',RE_CEIL], ['tile',RE_TILE], ['glass',RE_OPEN],
+    ['engfin',RE_ENGFIN], ['roof',RE_ROOFST], ['elec',RE_ELEC]
+  ];
+  const from=['arch','mep','roof','glass','dryceil','tile','engfin','plumb'];
+  from.forEach(src=>{
+    const list=o.take[src]; if(!Array.isArray(list)) return;
+    for(let i=list.length-1;i>=0;i--){
+      const pay=String(list[i].pay||'');
+      const hit=rules.find(([dest,re])=>dest!==src && re.test(pay));
+      if(hit){ (o.take[hit[0]]=o.take[hit[0]]||[]).unshift(list.splice(i,1)[0]); }
+    }
+  });
+}
+
+function migrate(o){
+  if(!o || !o.meta || !o.take) return null;
+  o.ui = Object.assign({qtoBy:'item',qtoQ:'',qtoSort:'item',qtoDir:'asc',qtoSrc:'',
+                        bomQ:'',bomSort:'amt',bomDir:'desc',dupaQ:'',priceQ:'',priceCats:[],
+                        rail:true,newCat:null,_focus:null}, o.ui||{});
+  if(!Array.isArray(o.ui.priceCats)) o.ui.priceCats=[];
+  if(typeof o.ui.rail!=='boolean') o.ui.rail=true;
+  if(!Array.isArray(o.scopes)) o.scopes = JSON.parse(JSON.stringify(DEFAULT_SCOPES));
+
+  /* pay items added after earlier releases */
+  const have=new Set((o.dupa||[]).map(d=>d.item));
+  SEED_DUPA.forEach(d=>{ if(!have.has(d[0]))
+    o.dupa.push({id:uid('d'),item:d[0],desc:d[1],unit:d[2],dim:d[3],lab:d[4],eqp:d[5],mat:d[6],on:true}); });
+
+  /* v1: the combined plumbing-and-electrical sheet splits in two */
+  if(o.take.mep){
+    const isElec = r => RE_ELEC.test(String(r.pay||'')) || /electric|conduit|outlet|lighting|panel|wire/i.test(r.desc||'');
+    o.take.plumb = (o.take.plumb||[]).concat(o.take.mep.filter(r=>!isElec(r)));
+    o.take.elec  = (o.take.elec ||[]).concat(o.take.mep.filter(isElec));
+    delete o.take.mep;
+    o.scopes = o.scopes.filter(s=>s.id!=='mep');
+  }
+
+  /* make sure every built-in sheet exists, in the current order */
+  DEFAULT_SCOPES.forEach((d,i)=>{
+    const ex=o.scopes.find(s=>s.id===d.id);
+    if(!ex) o.scopes.splice(i,0,{...d});
+    else if(!ex.custom && ex.name===ex._seedName) ex.name=d.name;   /* untouched name follows the rename */
+  });
+  /* apply the renames for anyone who never edited the sheet name */
+  const RENAMED={conc:['Concrete','Concreting Works'],
+                 glass:['Glass works','Windows, glass and doors'],
+                 roof:['Roofing','Roofing Works']};
+  Object.entries(RENAMED).forEach(([id,[was,now]])=>{
+    const sc=o.scopes.find(s=>s.id===id); if(sc && sc.name===was) sc.name=now;
+  });
+  /* built-in sheets take the current note and code; custom ones keep theirs */
+  o.scopes.forEach(sc=>{
+    const d=DEFAULT_SCOPES.find(x=>x.id===sc.id);
+    if(d && !sc.custom){ sc.note=d.note; if(!sc.code||sc.code===d.code) sc.code=d.code; }
+  });
+  /* built-ins first, in canonical order, then custom sheets in their own order */
+  const order=DEFAULT_SCOPES.map(d=>d.id);
+  o.scopes.sort((x,y)=>{
+    const i=order.indexOf(x.id), j=order.indexOf(y.id);
+    if(i<0&&j<0) return 0; if(i<0) return 1; if(j<0) return -1; return i-j;
+  });
+  o.scopes.forEach(s=>{ if(!Array.isArray(o.take[s.id])) o.take[s.id]=[]; });
+
+  /* v2: the roof framing schedule folds into the roofing sheet as measured lines */
+  if(Array.isArray(o.steel) && o.steel.length){
+    o.take.roof = o.take.roof||[];
+    o.steel.forEach(r=>{
+      const pay = r.pay || (/purlin/i.test(r.mem)?'1047(2)c'
+                          : /sagrod|turnbuckle|brac/i.test(r.mem)?'SPL-R1':'1047(2)b');
+      o.take.roof.push({id:uid('t'),desc:r.mem,pay,mode:'M',l:0,w:0,h:0,
+        n:(+r.kgm||0)*(+r.len||0)*(+r.n||0), f:(+r.f||1), basis:''});
+    });
+  }
+  delete o.steel;
+
+  /* re-file lines that now belong on a different sheet */
+  reroute(o);
+
+  (o.rebar||[]).forEach(r=>{ if(r.pay===undefined) r.pay=''; if(!r.gr) r.gr = r.d>=16?'60':'40'; });
+  o.bill = Object.assign({no:1,from:'',to:'',ret:10,adv:15,advOn:true,prev:{},now:{}}, o.bill||{});
+  return o;
+}
+
+const stampOf = o => (o && o.meta && +o.meta.savedAt) || 0;
+
+let S = (function(){
+  /* the working copy this browser holds for this particular file */
+  let local=null;
+  const keys=[SKEY];
+  if(DOC_ID==='workspace') keys.push('darkwiz_qs_v3','darkwiz_qs_v2','pndsyn_qs_v1');
+  for(const k of keys){
+    try{ const raw=Store.get(k); if(raw){ local=migrate(JSON.parse(raw)); if(local) break; } }catch(e){}
+  }
+  /* the copy saved into the file itself */
+  let embed=null;
+  if(EMBED){ try{ const c=JSON.parse(JSON.stringify(EMBED)); delete c.__docId; embed=migrate(c); }catch(e){} }
+
+  if(local && embed) return stampOf(local) >= stampOf(embed) ? local : embed;
+  return local || embed || seedState();
+})();
+
+const persist = () => { try{ Store.set(SKEY, JSON.stringify(S)); }catch(e){} };
+
+/* ── 6. Derived calculations ───────────────────────────────── */
+const Calc = {
+  rowQty(r){
+    const n=+r.n||0, f=+r.f||1, l=+r.l||0, w=+r.w||0, h=+r.h||0;
+    switch(r.mode){
+      case 'V': return l*w*h*n*f;
+      case 'A': return l*w*n*f;
+      case 'L': return l*n*f;
+      case 'M': return n*f;
+      case 'EA':case 'LS': return n*f;
+      default: return 0;
+    }
+  },
+  rowDim(r){ return (MEAS[r.mode]||MEAS.EA).dim; },
+  dupa(item){ return S.dupa.find(d=>d.item===item) || null; },
+  dupaDirect(d){ return (+d.lab||0)+(+d.eqp||0)+(+d.mat||0); },
+  dupaBid(d){
+    const dc=Calc.dupaDirect(d);
+    const om=dc*(+S.cfg.ocm||0)/100, pr=dc*(+S.cfg.profit||0)/100;
+    const vt=(dc+om+pr)*(+S.cfg.vat||0)/100;
+    return {dc,om,pr,vt,bid:dc+om+pr+vt};
+  },
+  rebarKg(r){ const w=(REBAR.find(x=>x.d==r.d)||{w:0}).w;
+    return (+r.len||0)*(+r.nb||0)*(+r.n||0)*(+r.lap||1)*w; },
+  rebarPay(r){ return r.pay || ((+S.meta.storeys>1)?'902(1)b':'902(1)a'); },
+
+  /* every measured line, before any consolidation */
+  qtoLines(){
+    const out=[];
+    S.scopes.forEach(sc=>(S.take[sc.id]||[]).forEach(r=>{
+      if(!r.pay) return;
+      out.push({sheet:sc.name,sheetId:sc.id,item:r.pay,desc:r.desc,
+                qty:Calc.rowQty(r),dim:Calc.rowDim(r)});
+    }));
+    S.rebar.forEach(r=>out.push({sheet:'Rebar schedule',sheetId:'rebar',item:Calc.rebarPay(r),
+      desc:r.el+' — '+r.d+' mmØ Grade '+r.gr,qty:Calc.rebarKg(r),dim:'M'}));
+    return out;
+  },
+  qto(){
+    const map=new Map();
+    Calc.qtoLines().forEach(l=>{
+      const c=map.get(l.item)||{item:l.item,qty:0,dim:l.dim,src:new Set()};
+      c.qty+=l.qty; c.src.add(l.sheet); map.set(l.item,c);
+    });
+    return [...map.values()].sort((a,b)=>String(a.item).localeCompare(String(b.item),'en',{numeric:true}));
+  },
+  boq(){
+    return Calc.qto().map(q=>{
+      const d=Calc.dupa(q.item);
+      const b=d?Calc.dupaBid(d):{dc:0,om:0,pr:0,vt:0,bid:0};
+      return {...q, desc:d?d.desc:'(no DUPA — add the pay item)', unit:d?d.unit:U.u(q.dim),
+              dim:d?d.dim:q.dim, ...b, amt:q.qty*b.bid, direct:q.qty*b.dc};
+    });
+  },
+  totals(){
+    const rows=Calc.boq();
+    const direct=rows.reduce((a,r)=>a+r.direct,0);
+    const ocm=rows.reduce((a,r)=>a+r.qty*r.om,0);
+    const profit=rows.reduce((a,r)=>a+r.qty*r.pr,0);
+    const vat=rows.reduce((a,r)=>a+r.qty*r.vt,0);
+    const cont=direct*(+S.cfg.contingency||0)/100;
+    return {rows,direct,ocm,profit,vat,cont,abc:direct+ocm+profit+vat+cont};
+  },
+  bom(){
+    const q={}; S.scopes.forEach(sc=>(S.take[sc.id]||[]).forEach(r=>{
+      if(!r.basis) return; q[r.basis]=(q[r.basis]||0)+Calc.rowQty(r); }));
+    const out=new Map();
+    S.coef.forEach(c=>{
+      const drv=q[c.id]||0; if(!drv) return;
+      c.items.forEach(([nm,coef])=>{
+        const p=S.prices.find(x=>x.name===nm);
+        const cur=out.get(nm)||{name:nm,unit:p?p.unit:'—',cat:p?p.cat:'Uncategorised',
+                               rate:p?p.rate:0,qty:0,from:new Set()};
+        cur.qty+=drv*(+coef||0); cur.from.add(c.name); out.set(nm,cur);
+      });
+    });
+    const rk=S.rebar.reduce((a,r)=>a+Calc.rebarKg(r),0);
+    if(rk){ const p=S.prices.find(x=>x.name==='Reinforcing steel (by weight)');
+      out.set('Reinforcing steel (by weight)',{name:'Reinforcing steel (by weight)',unit:'kg',
+        cat:p?p.cat:'Reinforcement',rate:p?p.rate:0,
+        qty:(out.get('Reinforcing steel (by weight)')?.qty||0)+rk,from:new Set(['Rebar schedule'])}); }
+    const sk=(S.take.roof||[]).filter(r=>RE_ROOFST.test(String(r.pay||'')))
+              .reduce((a,r)=>a+Calc.rowQty(r),0);
+    if(sk){ const p=S.prices.find(x=>x.name==='Structural steel (fabricated, by weight)');
+      out.set('Structural steel (fabricated, by weight)',{name:'Structural steel (fabricated, by weight)',
+        unit:'kg',cat:p?p.cat:'Structural steel',rate:p?p.rate:0,qty:sk,from:new Set(['Roofing Works'])}); }
+    return [...out.values()].map(x=>({...x,amt:x.qty*x.rate}));
+  }
+};
+
+/* ── 7. Modules and navigation ─────────────────────────────── */
+function modules(){
+  return [
+   {id:'setup', code:'01', grp:'Set-up', name:'Project & settings',
+    note:'Everything downstream reads from here — title block details, unit system, currency, and the RA 9184 mark-up structure.'},
+   {id:'prices',code:'02', grp:'Set-up', name:'Material price list',
+    note:'The single price database. Rates are held in Philippine peso; the currency switch only changes how they are displayed.'},
+   {id:'coef',  code:'03', grp:'Set-up', name:'Material coefficients',
+    note:'How much of each material one unit of finished work consumes. The bill of materials multiplies take-off quantities by these.'},
+   {id:'mix',   code:'04', grp:'Set-up', name:'Concrete mix design',
+    note:'Proportion-by-volume method against DPWH classes, with the absolute-volume check and wastage allowance.'},
+   ...S.scopes.map((s,i)=>({id:'tk_'+s.id, code:'T'+(i+1), grp:'Take-off',
+     name:s.name, note:s.note, scope:s.id})),
+   {id:'qto',   code:'A1', grp:'Analysis', name:'Quantity take-off summary',
+    note:'Every measured line, consolidated the way you want to read it — by pay item, by sheet, by unit, or line by line.'},
+   {id:'bom',   code:'A2', grp:'Analysis', name:'Bill of materials',
+    note:'Take-off quantities exploded into purchasable materials through the coefficient sets.'},
+   {id:'dupa',  code:'A3', grp:'Analysis', name:'Detailed unit price analysis',
+    note:'Labour, equipment and material per unit of each pay item, plus the mark-up build-up to the unit bid price.'},
+   {id:'rebar', code:'A4', grp:'Analysis', name:'Rebar schedule',
+    note:'Bar schedule by element and grade, with the procurement split by grade. Weights follow the PNS 49 unit mass table adopted in NSCP 2015.'},
+   {id:'boq',   code:'B1', grp:'Output', name:'Bill of quantities',
+    note:'Quantity × unit bid price by pay item, rolling up to the approved budget for the contract.'},
+   {id:'cc',    code:'B2', grp:'Output', name:'Cost control',
+    note:'Budget against actual, open commitment and assigned cost — the SAP CJI3 view, by cost element.'},
+   {id:'bill',  code:'B3', grp:'Output', name:'Progress billing',
+    note:'Accomplishment this period against contract quantities, less retention and advance-payment recoupment.'},
+   {id:'port',  code:'B4', grp:'Output', name:'Portfolio',
+    note:'All live projects side by side — contract value, billed to date, cost incurred and margin.'},
+   {id:'ref',   code:'R1', grp:'Reference', name:'Standards & rates',
+    note:'NSCP 2015 bar masses and grades, DPWH concrete classes, RA 9184 mark-up ceilings, labour productivity and pakyawan rates.'}
+  ];
+}
+const M = id => modules().find(m=>m.id===id);
+
+/* ── 8. Small render helpers ───────────────────────────────── */
+function collOf(path){ return path.startsWith('take.') ? (S.take[path.slice(5)]||[]) : (S[path]||[]); }
+
+function inp(path,id,key,kind,extra){
+  const row = collOf(path).find(x=>x.id===id) || {};
+  let v = row[key];
+  let cls='cell', step='', type='text';
+  if(kind==='num'||kind==='money'||kind==='len'||kind==='pct'){ cls+=' n'; type='number'; step='any'; }
+  if(kind==='len')   v = v===''||v==null ? '' : +(U.out(v,'L')).toFixed(4);
+  if(kind==='money') v = v===''||v==null ? '' : +(U.money(v)).toFixed(2);
+  if(typeof v==='number' && kind==='num') v = +(+v).toFixed(4);
+  return `<input class="${cls}" type="${type}" ${step?'step="'+step+'"':''} value="${F.esc(v??'')}" ${extra||''}
+    onchange="App.upd('${path}','${id}','${key}',this.value,'${kind}')">`;
+}
+function sel(path,id,key,opts,extra){
+  const row = collOf(path).find(x=>x.id===id) || {};
+  const cur = row[key];
+  return `<select class="cell" ${extra||''} onchange="App.upd('${path}','${id}','${key}',this.value,'text')">`+
+    opts.map(o=>{ const val=Array.isArray(o)?o[0]:o, lbl=Array.isArray(o)?o[1]:o;
+      return `<option value="${F.esc(val)}" ${String(val)===String(cur)?'selected':''}>${F.esc(lbl)}</option>`;}).join('')+
+    `</select>`;
+}
+function del(path,id){ return `<button class="iconbtn noprint" title="Delete line" onclick="App.del('${path}','${id}')">×</button>`; }
+function cfgInp(key,kind,attrs){
+  const v=S.cfg[key];
+  return `<input type="number" step="any" ${attrs||''} value="${v}" onchange="App.cfg('${key}',this.value)">`;
+}
+function metaInp(key,type){
+  return `<input type="${type||'text'}" value="${F.esc(S.meta[key]??'')}" onchange="App.meta('${key}',this.value)">`;
+}
+function card(title,code,body,foot,desc){
+  return `<section class="card"><header><h3>${title}</h3>${code?`<span class="code">${code}</span>`:''}
+    <span class="sp"></span>${desc?`<p>${desc}</p>`:''}</header>
+    ${body}${foot?`<div class="btnrow noprint">${foot}</div>`:''}</section>`;
+}
+function kpi(list){
+  return `<div class="kpis">`+list.map(k=>`<div class="kpi ${k.tone||''}"><b>${k.l}</b><span>${k.v}</span>${k.s?`<small>${k.s}</small>`:''}</div>`).join('')+`</div>`;
+}
+const payOpts = () => [['','— select pay item —'],...S.dupa.map(d=>[d.item, d.item+'  '+d.desc])];
+const coefOpts = () => [['','— none —'],...S.coef.map(c=>[c.id,c.name])];
+const modeOpts = () => Object.entries(MEAS).map(([k,v])=>[k,v.lbl]);
+/* Real categories only — a blank is a material waiting to be filed, not a group. */
+const categories = () => [...new Set(S.prices.map(p=>String(p.cat||'').trim()).filter(Boolean))]
+  .sort((a,b)=>a.localeCompare(b));
+function catCell(p){
+  if(S.ui.newCat===p.id)
+    return `<input class="cell" id="newcat_${p.id}" placeholder="Name the new category"
+      onchange="App.setCat('${p.id}',this.value)">`;
+  const known=categories().includes(p.cat);
+  return `<select class="cell" onchange="App.catPick('${p.id}',this.value)">`+
+    (known?'':`<option value="" selected>— choose a category —</option>`)+
+    categories().map(c=>`<option value="${F.esc(c)}" ${c===p.cat?'selected':''}>${F.esc(c)}</option>`).join('')+
+    `<option value="__new__">＋ New category…</option></select>`;
+}
+function sortTh(view,key,label,cls){
+  const on = S.ui[view+'Sort']===key;
+  const arr = on ? (S.ui[view+'Dir']==='asc'?' ▲':' ▼') : '';
+  return `<th class="${cls||''}" style="cursor:pointer;user-select:none" title="Sort by ${label}"
+    onclick="App.sort('${view}','${key}')">${label}<span style="color:var(--signal)">${arr}</span></th>`;
+}
+function sortRows(rows,key,dir){
+  const r=[...rows];
+  r.sort((a,b)=>{
+    const x=a[key], y=b[key];
+    if(typeof x==='number' && typeof y==='number') return x-y;
+    return String(x??'').localeCompare(String(y??''),'en',{numeric:true,sensitivity:'base'});
+  });
+  return dir==='desc'? r.reverse() : r;
+}
+function searchBar(view,key,ph,extra){
+  return `<div class="noprint" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+      padding:10px 16px;background:var(--surface-2);border-bottom:1px solid var(--rule)">
+    <input id="flt_${view}" type="search" placeholder="${ph}" value="${F.esc(S.ui[key]||'')}"
+      oninput="App.filter('${key}',this.value,'flt_${view}')"
+      style="flex:1;min-width:200px;max-width:340px;padding:6px 10px;border:1px solid var(--rule);border-radius:3px">
+    ${extra||''}</div>`;
+}
+
+/* ── 9. Module renderers ───────────────────────────────────── */
+const V = {};
+
+V.setup = () => {
+  const t=Calc.totals();
+  const tier=MARKUP_TIERS.find(x=>t.direct<=x.upto)||MARKUP_TIERS[3];
+  return `
+  ${kpi([
+    {l:'Direct cost',v:F.short(t.direct),tone:'hi'},
+    {l:'Approved budget (ABC)',v:F.short(t.abc),tone:'hi',s:'incl. OCM, profit and VAT'},
+    {l:'Pay items priced',v:Calc.boq().filter(r=>r.bid>0).length+' / '+Calc.boq().length},
+    {l:'Suggested mark-up tier',v:tier.ocm+'% / '+tier.profit+'%',s:tier.label}
+  ])}
+  ${card('Title block','Sheet data',`<div class="pad"><div class="fgrid">
+    <div class="f"><label>Project name</label>${metaInp('name')}</div>
+    <div class="f"><label>Location</label>${metaInp('loc')}</div>
+    <div class="f"><label>Client / owner</label>${metaInp('client')}</div>
+    <div class="f"><label>Reference no.</label>${metaInp('ref')}</div>
+    <div class="f"><label>Prepared by</label>${metaInp('prep')}</div>
+    <div class="f"><label>Checked by</label>${metaInp('chk')}</div>
+    <div class="f"><label>Date</label>${metaInp('date','date')}</div>
+    <div class="f"><label>Revision</label>${metaInp('rev')}</div>
+    <div class="f"><label>Number of storeys</label>
+      <input type="number" min="1" step="1" value="${S.meta.storeys}" onchange="App.meta('storeys',this.value)">
+      <small style="color:var(--muted);font-size:11px">Switches rebar to pay item 902(1)b at 2 storeys and above.</small></div>
+  </div></div>`)}
+  ${card('Units and currency','Global',`<div class="pad">
+    <p class="hint">Metric and Philippine peso are the working basis — every quantity and rate is stored that way. The toggles in the toolbar change presentation only, so switching back and forth never rounds your data away.</p>
+    <div class="fgrid">
+      <div class="f"><label>Unit system</label>
+        <select onchange="App.units(this.value)">
+          <option value="metric" ${S.cfg.units==='metric'?'selected':''}>Metric — m, m², m³, kg</option>
+          <option value="imperial" ${S.cfg.units==='imperial'?'selected':''}>Imperial — ft, ft², ft³, lb</option>
+        </select></div>
+      <div class="f"><label>Display currency</label>
+        <select onchange="App.currency(this.value)">
+          <option value="PHP" ${S.cfg.currency==='PHP'?'selected':''}>₱ Philippine peso</option>
+          <option value="USD" ${S.cfg.currency==='USD'?'selected':''}>$ US dollar</option>
+        </select></div>
+      <div class="f"><label>Exchange rate ₱ per US$1.00</label>${cfgInp('fx')}</div>
+    </div></div>`)}
+  ${card('Mark-up structure','RA 9184',`<div class="pad">
+    <div class="note"><b>Indicative ceilings.</b> RA 9184 IRR and the governing DPWH department order set OCM and profit ceilings that step down as contract cost rises. The tier for a direct cost of ${F.m(t.direct,0)} is <b>${tier.label} — OCM ${tier.ocm}%, profit ${tier.profit}%</b>. Confirm against the current department order before submission; private works are not bound by these and normally carry 12% VAT.</div>
+    <div class="fgrid">
+      <div class="f"><label>OCM %</label>${cfgInp('ocm','min="0"')}</div>
+      <div class="f"><label>Profit %</label>${cfgInp('profit','min="0"')}</div>
+      <div class="f"><label>VAT %</label>${cfgInp('vat','min="0"')}</div>
+      <div class="f"><label>Contingency % of direct cost</label>${cfgInp('contingency','min="0"')}</div>
+    </div>
+    <div style="margin-top:14px"><button class="btn" onclick="App.applyTier()">Apply the suggested tier</button></div>
+    </div>`)}
+  ${card('Saving your work','Project file',`<div class="pad">
+    <p class="hint"><b>Save to this file</b> writes your whole project into a copy of the app itself, so you end up with one <code>.html</code> that is both the tool and the job. Open that file on any machine — no separate data file to keep track of, and nothing to install.</p>
+    <div class="note">A web page is not allowed to overwrite the file it was opened from. In <b>Chrome and Edge</b> the app can ask for a file once and then write straight to it every time after, which is as close to saving in place as a browser permits. In <b>Firefox and Safari</b> each save arrives as a new download instead — keep the newest one and it behaves the same way.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn pri" onclick="App.saveHTML()">Save to this file</button>
+      <button class="btn" onclick="App.saveHTML(true)">Save as a new file…</button>
+      <button class="btn" onclick="document.getElementById('loadFile').click()">Open a project</button>
+    </div>
+    <p class="hint" style="margin:14px 0 0">Files are named <b>${F.esc(App.fileName(''))}</b>. Between saves the work also sits in this browser's storage, so a refresh or a closed tab loses nothing — but that copy is tied to this machine, which is why the saved file is what you keep.</p>
+    </div>`)}
+  ${card('Other formats','Export',`<div class="pad">
+    <p class="hint">A plain <code>.json</code> is the smaller option if you only want the data — for a colleague's copy of the app, a repository, or your own records. The app reads both formats back through <b>Open</b>.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" onclick="App.saveFile()">Export data only (.json)</button>
+      <button class="btn" onclick="App.exportCSV()">Export this sheet (.csv)</button>
+      <button class="btn" style="color:var(--bad);border-color:#E7C7C3" onclick="App.reset()">Reset to sample project</button>
+    </div></div>`)}`;
+};
+
+V.prices = () => {
+  const q=(S.ui.priceQ||'').toLowerCase();
+  const picked=new Set(S.ui.priceCats||[]);
+  const cats=categories();
+  const countOf = c => S.prices.filter(p=>p.cat===c).length;
+  const hit = p => (!q || (p.name+' '+p.cat+' '+p.unit).toLowerCase().includes(q))
+                && (!picked.size || picked.has(p.cat));
+
+  const chips = `<div class="chips noprint">
+    <button class="chip-b ${picked.size?'':'on'}" onclick="App.catFilter('__all__')">All categories<span class="ct">${S.prices.length}</span></button>
+    ${cats.map(c=>`<button class="chip-b ${picked.has(c)?'on':''}" onclick="App.catFilter('${F.esc(c).replace(/'/g,"&#39;")}')">${F.esc(c)}<span class="ct">${countOf(c)}</span></button>`).join('')}
+    ${picked.size?`<button class="chip-b clear" onclick="App.catFilter('__all__')">Clear ${picked.size} filter${picked.size>1?'s':''}</button>`:''}
+  </div>`;
+
+  let rows='', shown=0;
+  cats.forEach(c=>{
+    const list=S.prices.filter(p=>p.cat===c && hit(p));
+    if(!list.length) return;
+    rows+=`<tr class="grp"><td colspan="5">${F.esc(c)} <span style="opacity:.6;font-weight:400">· ${list.length} item${list.length>1?'s':''}</span></td></tr>`;
+    list.forEach(p=>{ shown++;
+      const fresh = p.cat==='' || p.name==='';
+      rows+=`<tr${fresh?' style="background:var(--signal-wash)"':''}>
+        <td style="min-width:260px">${inp('prices',p.id,'name','text',fresh?'placeholder="Name the material" autofocus':'')}</td>
+        <td style="width:90px">${inp('prices',p.id,'unit','text',fresh?'placeholder="unit"':'')}</td>
+        <td style="width:200px">${catCell(p)}</td>
+        <td class="n" style="width:150px">${inp('prices',p.id,'rate','money')}</td>
+        <td class="c" style="width:44px">${del('prices',p.id)}</td></tr>`;
+    });
+  });
+  /* materials with no category yet sit at the bottom, ready to be filled in */
+  const loose=S.prices.filter(p=>!String(p.cat||'').trim());
+  if(loose.length && !picked.size){
+    rows+=`<tr class="grp" style="background:var(--signal);color:#1B1405"><td colspan="5">Uncategorised — choose a category for each</td></tr>`;
+    loose.forEach(p=>{ shown++;
+      rows+=`<tr style="background:var(--signal-wash)">
+        <td style="min-width:260px">${inp('prices',p.id,'name','text','placeholder="Name the material"')}</td>
+        <td style="width:90px">${inp('prices',p.id,'unit','text','placeholder="unit"')}</td>
+        <td style="width:200px">${catCell(p)}</td>
+        <td class="n" style="width:150px">${inp('prices',p.id,'rate','money')}</td>
+        <td class="c" style="width:44px">${del('prices',p.id)}</td></tr>`;
+    });
+  }
+
+  return card('Material database','Rates in '+U.cur(),
+    `<div class="pad" style="padding-bottom:0"><p class="hint">Rates are stored in peso. Editing a rate while the display is set to dollars converts it back at the toolbar exchange rate, so the peso figure stays the source of truth. Category is a picker rather than free text — a mistyped category would silently split a group in two, so choose an existing one or add a new one deliberately.</p></div>
+     ${searchBar('prices','priceQ','Search materials, categories or units…',
+       `<span style="font-size:12px;color:var(--muted)">${shown} of ${S.prices.length} materials · ${cats.length} categories</span>`)}
+     ${chips}
+     <div class="tw"><table><thead><tr><th>Material</th><th>Unit</th><th>Category</th><th class="n">Unit rate (${U.sym()})</th><th></th></tr></thead>
+     <tbody>${rows||'<tr><td colspan="5" style="padding:22px;text-align:center;color:var(--muted)">Nothing matches that search or filter.</td></tr>'}</tbody></table></div>`,
+    `<button class="btn pri" onclick="App.add('prices')">Add material</button>
+     <span style="align-self:center;font-size:12px;color:var(--muted)">New rows land at the bottom, blank, for you to name and categorise.</span>`);
+};
+
+V.coef = () => {
+  const body = S.coef.map(c=>{
+    const rows=c.items.map((it,i)=>{
+      const p=S.prices.find(x=>x.name===it[0]);
+      return `<tr><td>${F.esc(it[0])}</td>
+        <td class="n num">${F.n(it[1],4)}</td>
+        <td>${p?F.esc(p.unit):'<span class="pill r">not in price list</span>'} / ${c.drv}</td>
+        <td class="n num">${p?F.m(p.rate):'—'}</td>
+        <td class="n num calc">${p?F.m(p.rate*it[1]):'—'}</td>
+        <td class="c noprint"><button class="iconbtn" onclick="App.delCoefItem('${c.id}',${i})">×</button></td></tr>`;
+    }).join('');
+    const sub=c.items.reduce((a,it)=>{const p=S.prices.find(x=>x.name===it[0]);return a+(p?p.rate*it[1]:0);},0);
+    return `<section class="card"><header><h3>${F.esc(c.name)}</h3><span class="code">per ${c.drv}</span>
+      <span class="sp"></span><p>Material cost ${F.m(sub)} per ${c.drv}</p></header>
+      <div class="tw"><table><thead><tr><th>Material</th><th class="n">Coefficient</th><th>Unit</th>
+      <th class="n">Rate</th><th class="n">Cost per ${c.drv}</th><th></th></tr></thead>
+      <tbody>${rows}<tr class="sum"><td colspan="4">Material cost per ${c.drv}</td>
+      <td class="n num">${F.m(sub)}</td><td></td></tr></tbody></table></div>
+      <div class="btnrow noprint">
+        <select id="cf_${c.id}" style="padding:6px;border:1px solid var(--rule);border-radius:3px">
+          ${S.prices.map(p=>`<option value="${F.esc(p.name)}">${F.esc(p.name)}</option>`).join('')}
+        </select>
+        <input id="cq_${c.id}" type="number" step="any" value="1" style="width:110px;padding:6px;border:1px solid var(--rule);border-radius:3px;text-align:right;font-family:var(--f-num)">
+        <button class="btn" onclick="App.addCoefItem('${c.id}')">Add material to this set</button>
+      </div></section>`;
+  }).join('');
+  return `<div class="note">Coefficients are the working assumptions of the estimate — cement bags per cubic metre, blocks per square metre, litres of paint per square metre. The defaults below follow common Philippine practice; replace them with your firm's own historical figures before a tender goes out.</div>${body}`;
+};
+
+V.mix = () => {
+  const m=S.mix, sum=(+m.cem||0)+(+m.sand||0)+(+m.grav||0);
+  const vol=+m.vol||0, waste=1+(+m.waste||0)/100;
+  const dry=+m.dry||1.75;
+  const cemVol = sum? (m.cem/sum)*dry : 0;
+  const cemKg  = cemVol*1440, bags = cemKg/40;
+  const sandV  = sum? (m.sand/sum)*dry : 0;
+  const gravV  = sum? (m.grav/sum)*dry : 0;
+  const water  = cemKg*(+m.wc||0);
+  const T = v => v*vol*waste;
+  const near = MIXES.reduce((best,x)=>{
+    const r=x.ratio.split(' : ').map(Number);
+    const d=Math.abs(r[1]/r[0]-(m.sand/m.cem))+Math.abs(r[2]/r[0]-(m.grav/m.cem));
+    return d<best.d?{d,x}:best;},{d:1e9,x:MIXES[2]}).x;
+  return `
+  ${kpi([
+    {l:'Class match',v:near.cls,s:near.ratio+' · f\u2032c '+near.fc+' MPa'},
+    {l:'Cement',v:F.n(T(bags),1),s:'bags of 40 kg, incl. '+m.waste+'% wastage',tone:'hi'},
+    {l:'Sand',v:F.n(U.out(T(sandV),'V'),2),s:U.u('V')},
+    {l:'Gravel',v:F.n(U.out(T(gravV),'V'),2),s:U.u('V')},
+    {l:'Mixing water',v:F.n(U.out(T(water)/1000,'V')*1000,0),s:U.u('V')==='m³'?'litres':'US gal (approx.)'}
+  ])}
+  ${card('Mix inputs','ACI 211.1 / DPWH',`<div class="pad"><div class="fgrid">
+    <div class="f"><label>Cement parts</label><input type="number" step="any" value="${m.cem}" onchange="App.mix('cem',this.value)"></div>
+    <div class="f"><label>Sand parts</label><input type="number" step="any" value="${m.sand}" onchange="App.mix('sand',this.value)"></div>
+    <div class="f"><label>Gravel parts</label><input type="number" step="any" value="${m.grav}" onchange="App.mix('grav',this.value)"></div>
+    <div class="f"><label>Concrete volume (${U.u('V')})</label><input type="number" step="any" value="${(U.out(vol,'V')).toFixed(3)}" onchange="App.mix('vol',this.value,'V')"></div>
+    <div class="f"><label>Water–cement ratio, by mass</label><input type="number" step="any" value="${m.wc}" onchange="App.mix('wc',this.value)"></div>
+    <div class="f"><label>Dry volume factor</label><input type="number" step="any" value="${m.dry}" onchange="App.mix('dry',this.value)"></div>
+    <div class="f"><label>Wastage %</label><input type="number" step="any" value="${m.waste}" onchange="App.mix('waste',this.value)"></div>
+  </div>
+  <p class="hint" style="margin-top:12px">The dry volume factor accounts for bulking and voids — 1.75 is the value that reproduces the familiar 9 bags per cubic metre for a 1:2:4 mix. Raise it toward 1.85 for well-graded aggregate and a stiffer mix.</p></div>`)}
+  ${card('Quantities','Per '+U.u('V')+' and total',
+   `<div class="tw"><table><thead><tr><th>Component</th><th class="n">Per ${U.u('V')}</th><th>Unit</th>
+    <th class="n">For ${F.n(U.out(vol,'V'),2)} ${U.u('V')}</th><th class="n">With ${m.waste}% wastage</th><th class="n">Cost</th></tr></thead><tbody>
+    ${[['Portland cement, 40 kg',bags,'bag',bags*vol,T(bags)],
+       ['Washed sand',U.out(sandV,'V'),U.u('V'),U.out(sandV*vol,'V'),U.out(T(sandV),'V')],
+       ['Gravel 3/4"',U.out(gravV,'V'),U.u('V'),U.out(gravV*vol,'V'),U.out(T(gravV),'V')],
+       ['Water (delivered)',water,'L',water*vol,T(water)]
+      ].map(r=>{
+        const p=S.prices.find(x=>x.name===r[0]);
+        const qty = r[0]==='Water (delivered)' ? T(water)/1000 : T(r[0]==='Portland cement, 40 kg'?bags:(r[0]==='Washed sand'?sandV:gravV));
+        return `<tr><td>${r[0]}</td><td class="n num">${F.n(r[1],3)}</td><td>${r[2]}</td>
+        <td class="n num">${F.n(r[3],2)}</td><td class="n num calc">${F.n(r[4],2)}</td>
+        <td class="n num">${p?F.m(qty*p.rate):'—'}</td></tr>`;}).join('')}
+    </tbody></table></div>`)}
+  ${card('DPWH concrete classes','Reference',
+   `<div class="tw"><table><thead><tr><th>Class</th><th>Proportion</th><th class="n">f\u2032c MPa</th><th class="n">psi</th>
+    <th class="n">w/c</th><th class="n">Cement bags/m³</th><th class="n">Sand m³</th><th class="n">Gravel m³</th><th>Typical use</th></tr></thead><tbody>
+    ${MIXES.map(x=>`<tr${x.cls===near.cls?' class="sum"':''}><td><b>${x.cls}</b></td><td class="num">${x.ratio}</td>
+      <td class="n num">${x.fc}</td><td class="n num">${x.psi}</td><td class="n num">${x.wc}</td>
+      <td class="n num">${F.n(x.cem,1)}</td><td class="n num">${F.n(x.sand,2)}</td><td class="n num">${F.n(x.grav,2)}</td>
+      <td style="font-size:12px;color:var(--muted)">${x.use}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="pad"><p class="hint">Quantities are on the standard basis of 1.00 m³ gravel and 0.50 m³ sand per cubic metre of concrete. Cement of 1,440 kg/m³ bulk density in 40 kg bags. These are prescriptive proportions for ordinary work — anything carrying a specified f\u2032c on a signed drawing needs a trial mix and cylinder tests under NSCP 2015 Section 405.</p></div>`)}`;
+};
+
+/* ── take-off sheets ───────────────────────────────────────── */
+V.takeoff = (scopeId) => {
+  const sc=S.scopes.find(x=>x.id===scopeId);
+  if(!sc) return '<div class="card"><div class="pad">That take-off sheet no longer exists.</div></div>';
+  const path='take.'+scopeId, rows=S.take[scopeId]||[];
+  let total=0, amount=0;
+  const body = rows.map(r=>{
+    const q=Calc.rowQty(r), dim=Calc.rowDim(r);
+    const d=Calc.dupa(r.pay); const b=d?Calc.dupaBid(d):null;
+    const amt=b?q*b.bid:0; total+=q; amount+=amt;
+    const need=(MEAS[r.mode]||MEAS.EA).need;
+    const dis = k => need.includes(k)?'':'disabled style="opacity:.3"';
+    return `<tr>
+      <td style="min-width:230px">${inp(path,r.id,'desc','text')}</td>
+      <td style="min-width:200px">${sel(path,r.id,'pay',payOpts())}</td>
+      <td style="min-width:150px">${sel(path,r.id,'mode',modeOpts())}</td>
+      <td class="n" style="width:96px">${inp(path,r.id,'l','len',dis('l'))}</td>
+      <td class="n" style="width:96px">${inp(path,r.id,'w','len',dis('w'))}</td>
+      <td class="n" style="width:96px">${inp(path,r.id,'h','len',dis('h'))}</td>
+      <td class="n" style="width:82px">${inp(path,r.id,'n','num')}</td>
+      <td class="n" style="width:82px">${inp(path,r.id,'f','num')}</td>
+      <td class="n num calc" style="width:110px">${F.q(U.out(q,dim))}</td>
+      <td style="width:52px;color:var(--muted)">${U.u(dim)}</td>
+      <td style="min-width:170px">${sel(path,r.id,'basis',coefOpts())}</td>
+      <td class="n num" style="width:120px">${b?F.m(b.bid):'<span class="pill y">no rate</span>'}</td>
+      <td class="n num calc" style="width:130px">${b?F.m(amt):'—'}</td>
+      <td class="c">${del(path,r.id)}</td></tr>`;
+  }).join('');
+
+  const cfgStrip = `<div class="pad noprint" style="border-bottom:1px solid var(--rule-soft);background:var(--surface-2)">
+    <div class="fgrid" style="grid-template-columns:2fr 1fr 3fr">
+      <div class="f"><label>Sheet name</label>
+        <input value="${F.esc(sc.name)}" onchange="App.scopeSet('${sc.id}','name',this.value)"></div>
+      <div class="f"><label>Pay item range</label>
+        <input value="${F.esc(sc.code||'')}" onchange="App.scopeSet('${sc.id}','code',this.value)"></div>
+      <div class="f"><label>Sheet note</label>
+        <input value="${F.esc(sc.note||'')}" onchange="App.scopeSet('${sc.id}','note',this.value)"></div>
+    </div></div>`;
+
+  return card(sc.name+' take-off', sc.code||'custom',
+    `${cfgStrip}
+     <div class="pad" style="padding-bottom:0"><p class="hint">Choose a measurement mode per line — the greyed dimension boxes are the ones that mode does not use. The factor column carries wastage, laps, or an allowance for a shape you have simplified. Enter a negative dimension to deduct an opening.</p></div>
+     <div class="tw"><table><thead><tr>
+      <th>Description</th><th>Pay item</th><th>Measurement</th>
+      <th class="n">L (${U.u('L')})</th><th class="n">W (${U.u('L')})</th><th class="n">H (${U.u('L')})</th>
+      <th class="n">No.</th><th class="n">Factor</th><th class="n">Quantity</th><th>Unit</th>
+      <th>Material basis</th><th class="n">Unit bid price</th><th class="n">Amount</th><th></th></tr></thead>
+      <tbody>${body||'<tr><td colspan="14" style="padding:22px;text-align:center;color:var(--muted)">No lines yet. Add the first one below.</td></tr>'}
+      <tr class="tot"><td colspan="12">Scope amount</td><td class="n">${F.m(amount)}</td><td></td></tr>
+      </tbody></table></div>`,
+    `<button class="btn pri" onclick="App.addTake('${scopeId}')">Add line</button>
+     <button class="btn" onclick="App.dupTake('${scopeId}')">Duplicate last line</button>
+     <span class="sp" style="flex:1"></span>
+     ${sc.custom?`<button class="btn" style="color:var(--bad);border-color:#E7C7C3" onclick="App.delScope('${sc.id}')">Delete this sheet</button>`
+                :`<span style="align-self:center;font-size:12px;color:var(--muted)">Built-in sheet — rename it freely, but it cannot be deleted.</span>`}`);
+};
+
+/* ── rebar schedule ────────────────────────────────────────── */
+V.rebar = () => {
+  const auto=(+S.meta.storeys>1)?'902(1)b':'902(1)a';
+  const payO=[['','Auto · '+auto],...payOpts().slice(1)];
+  const grO=GRADES.map(g=>[g.g,'Grade '+g.g+' · f\u1d67 '+g.fy+' MPa']);
+  let kg=0; const byGrade={};
+  const body=S.rebar.map(r=>{
+    const w=(REBAR.find(x=>x.d==r.d)||{w:0}).w, k=Calc.rebarKg(r); kg+=k;
+    byGrade[r.gr]=(byGrade[r.gr]||0)+k;
+    const g=GRADES.find(x=>x.g===r.gr)||GRADES[1];
+    const pcs=(+r.len||0)*(+r.nb||0)*(+r.n||0)*(+r.lap||1)/12;
+    return `<tr>
+      <td style="min-width:200px">${inp('rebar',r.id,'el','text')}</td>
+      <td style="width:100px">${sel('rebar',r.id,'d',REBAR.map(x=>[x.d,x.d+' mmØ']))}</td>
+      <td style="width:150px">${sel('rebar',r.id,'gr',grO)}</td>
+      <td class="n num" style="width:80px">${g.fy}</td>
+      <td class="n num" style="width:82px">${F.n(w,3)}</td>
+      <td class="n" style="width:100px">${inp('rebar',r.id,'len','len')}</td>
+      <td class="n" style="width:92px">${inp('rebar',r.id,'nb','num')}</td>
+      <td class="n" style="width:92px">${inp('rebar',r.id,'n','num')}</td>
+      <td class="n" style="width:88px">${inp('rebar',r.id,'lap','num')}</td>
+      <td class="n num calc" style="width:112px">${F.n(U.out(k,'M'),2)}</td>
+      <td class="n num" style="width:100px">${F.n(pcs,1)}</td>
+      <td style="min-width:160px">${sel('rebar',r.id,'pay',payO)}</td>
+      <td class="c">${del('rebar',r.id)}</td></tr>`;
+  }).join('');
+  const gradeSplit=GRADES.map(g=>`<tr><td><b>Grade ${g.g}</b> · f\u1d67 ${g.fy} MPa</td>
+      <td class="n num">${F.n(U.out(byGrade[g.g]||0,'M'),2)}</td>
+      <td class="n num">${kg?F.n((byGrade[g.g]||0)/kg*100,1):'0.0'}%</td></tr>`).join('');
+  return `
+  ${kpi([
+    {l:'Total reinforcement',v:F.n(U.out(kg,'M'),0)+' '+U.u('M'),tone:'hi'},
+    {l:'Grade 60 share',v:kg?F.n((byGrade['60']||0)/kg*100,1)+'%':'0%',s:'f\u1d67 415 MPa'},
+    {l:'Default pay item',v:auto,s:S.meta.storeys+' storey'+(S.meta.storeys>1?'s':'')},
+    {l:'Elements scheduled',v:S.rebar.length}
+  ])}
+  ${card('Bar schedule','902(1)',
+    `<div class="pad" style="padding-bottom:0"><p class="hint">Unit mass follows PNS 49 as adopted in NSCP 2015 and is the same for every grade — grade changes the yield strength you design to, not the weight you buy. The lap factor covers splices, hooks and bends: 1.05 for straight bars, 1.08 where column and beam laps are dense. Piece counts assume 12 m commercial lengths.</p></div>
+     <div class="tw"><table><thead><tr><th>Element</th><th>Bar size</th><th>Grade</th><th class="n">f\u1d67 MPa</th><th class="n">kg/m</th>
+      <th class="n">Length (${U.u('L')})</th><th class="n">Bars/set</th><th class="n">Sets</th>
+      <th class="n">Lap</th><th class="n">Weight (${U.u('M')})</th><th class="n">Pcs @ 12 m</th><th>Pay item</th><th></th></tr></thead>
+      <tbody>${body}<tr class="tot"><td colspan="9">Total</td><td class="n">${F.n(U.out(kg,'M'),2)}</td><td></td><td></td><td></td></tr>
+      </tbody></table></div>`,
+    `<button class="btn pri" onclick="App.add('rebar')">Add element</button>`)}
+  <div class="two">
+  ${card('Reinforcement by grade','Procurement split',
+    `<div class="tw"><table><thead><tr><th>Grade</th><th class="n">Weight (${U.u('M')})</th><th class="n">Share</th></tr></thead>
+     <tbody>${gradeSplit}<tr class="tot"><td>Total</td><td class="n">${F.n(U.out(kg,'M'),2)}</td><td class="n">100.0%</td></tr></tbody></table></div>`)}
+  ${card('PNS 49 / NSCP 2015 unit mass','Reference',
+    `<div class="tw"><table><thead><tr><th class="n">Ø mm</th><th class="n">kg/m</th><th class="n">Area mm²</th>
+      <th class="n">6 m</th><th class="n">9 m</th><th class="n">12 m</th></tr></thead>
+     <tbody>${REBAR.map(x=>`<tr><td class="n num"><b>${x.d}</b></td><td class="n num">${x.w.toFixed(3)}</td>
+       <td class="n num">${F.n(Math.PI*x.d*x.d/4,1)}</td><td class="n num">${(x.w*6).toFixed(2)}</td>
+       <td class="n num">${(x.w*9).toFixed(2)}</td><td class="n num">${(x.w*12).toFixed(2)}</td></tr>`).join('')}
+     </tbody></table></div>`)}
+  </div>
+  ${card('Reinforcing bar grades','PNS 49 · ASTM A615 · NSCP 2015',
+    `<div class="tw"><table><thead><tr><th>Grade</th><th>PNS 49 designation</th><th class="n">f\u1d67 MPa</th>
+      <th>ASTM equivalent</th><th class="n">ASTM f\u1d67 MPa</th><th class="n">Min. tensile MPa</th>
+      <th>Common sizes</th><th>Where it is used</th></tr></thead><tbody>
+      ${GRADES.map(g=>`<tr><td><b>Grade ${g.g}</b></td><td>${g.pns}</td><td class="n num">${g.fy}</td>
+        <td>${g.astm}</td><td class="n num">${g.afy}</td><td class="n num">${g.ten}</td>
+        <td style="white-space:nowrap">${g.sizes}</td>
+        <td style="font-size:12px;color:var(--muted)">${g.use}</td></tr>`).join('')}
+     </tbody></table></div>
+     <div class="pad"><div class="note"><b>Grade 33 is not interchangeable.</b> Philippine mills still sell 10 mm and 12 mm bar as Grade 230, and it is fine for ties and slab bars in ordinary construction — but NSCP 2015 §421 bars it from members resisting earthquake forces, where the drawings will call for Grade 415. If a bar list came in without a grade, check the schedule before you price it: the difference is roughly ₱2 to ₱4 a kilo, and substituting downward is a structural defect, not a saving.</div></div>`)}`;
+};
+
+/* ── quantity take-off summary ─────────────────────────────── */
+V.qto = () => {
+  const by=S.ui.qtoBy||'item', q=(S.ui.qtoQ||'').toLowerCase();
+  let lines=Calc.qtoLines();
+  if(S.ui.qtoSrc) lines=lines.filter(l=>l.sheetId===S.ui.qtoSrc);
+  if(q) lines=lines.filter(l=>{
+    const d=Calc.dupa(l.item);
+    return (l.item+' '+l.desc+' '+l.sheet+' '+(d?d.desc:'')).toLowerCase().includes(q); });
+
+  const sheets=[...new Map(Calc.qtoLines().map(l=>[l.sheetId,l.sheet])).entries()];
+  const controls=`
+    <select onchange="App.uiSet('qtoBy',this.value)" style="padding:6px 10px;border:1px solid var(--rule);border-radius:3px">
+      ${[['item','Consolidate by pay item'],['sheet','Group by take-off sheet'],
+         ['unit','Group by unit of measure'],['line','Line by line, no grouping']]
+        .map(o=>`<option value="${o[0]}" ${by===o[0]?'selected':''}>${o[1]}</option>`).join('')}
+    </select>
+    <select onchange="App.uiSet('qtoSrc',this.value)" style="padding:6px 10px;border:1px solid var(--rule);border-radius:3px">
+      <option value="">All source sheets</option>
+      ${sheets.map(([id,nm])=>`<option value="${id}" ${S.ui.qtoSrc===id?'selected':''}>${F.esc(nm)}</option>`).join('')}
+    </select>
+    <span style="font-size:12px;color:var(--muted)">${lines.length} line${lines.length===1?'':'s'}</span>`;
+
+  const rowsOf = ls => {
+    const map=new Map();
+    ls.forEach(l=>{ const c=map.get(l.item)||{item:l.item,qty:0,dim:l.dim,src:new Set(),n:0};
+      c.qty+=l.qty; c.n++; c.src.add(l.sheet); map.set(l.item,c); });
+    return [...map.values()].map(r=>{ const d=Calc.dupa(r.item);
+      const b=d?Calc.dupaBid(d):null;
+      return {...r, desc:d?d.desc:'(no DUPA)', unit:d?d.unit:U.u(r.dim),
+              dimU:d?d.dim:r.dim, rate:b?b.bid:0, amt:b?r.qty*b.bid:0,
+              sources:[...r.src].join(', ')}; });
+  };
+  const head=()=>`<tr>${sortTh('qto','item','Pay item')}${sortTh('qto','desc','Description')}
+    ${sortTh('qto','qty','Quantity','n')}${sortTh('qto','unit','Unit')}
+    ${sortTh('qto','rate','Unit bid price','n')}${sortTh('qto','amt','Amount','n')}
+    ${sortTh('qto','sources','Source sheets')}</tr>`;
+  const tr=r=>`<tr><td class="num">${F.esc(r.item)}</td><td>${F.esc(r.desc)}</td>
+    <td class="n num">${F.q(U.out(r.qty,r.dimU))}</td><td>${r.unit}</td>
+    <td class="n num">${r.rate?F.m(r.rate):'—'}</td><td class="n num calc">${r.amt?F.m(r.amt):'—'}</td>
+    <td style="font-size:12px;color:var(--muted)">${F.esc(r.sources)}</td></tr>`;
+
+  let table='';
+  if(by==='line'){
+    let ls=lines.map(l=>{ const d=Calc.dupa(l.item), b=d?Calc.dupaBid(d):null;
+      return {...l, desc2:d?d.desc:'(no DUPA)', unit:d?d.unit:U.u(l.dim),
+              rate:b?b.bid:0, amt:b?l.qty*b.bid:0}; });
+    ls=sortRows(ls,S.ui.qtoSort==='sources'?'sheet':(S.ui.qtoSort==='desc'?'desc':S.ui.qtoSort),S.ui.qtoDir);
+    const tot=ls.reduce((a,x)=>a+x.amt,0);
+    table=`<table><thead><tr>${sortTh('qto','item','Pay item')}${sortTh('qto','desc','Line description')}
+      ${sortTh('qto','qty','Quantity','n')}${sortTh('qto','unit','Unit')}
+      ${sortTh('qto','rate','Unit bid price','n')}${sortTh('qto','amt','Amount','n')}
+      ${sortTh('qto','sources','Sheet')}</tr></thead><tbody>
+      ${ls.map(l=>`<tr><td class="num">${F.esc(l.item)}</td><td>${F.esc(l.desc)}</td>
+        <td class="n num">${F.q(U.out(l.qty,l.dim))}</td><td>${l.unit}</td>
+        <td class="n num">${l.rate?F.m(l.rate):'—'}</td><td class="n num calc">${l.amt?F.m(l.amt):'—'}</td>
+        <td style="font-size:12px;color:var(--muted)">${F.esc(l.sheet)}</td></tr>`).join('')}
+      <tr class="tot"><td colspan="5">Total</td><td class="n">${F.m(tot)}</td><td></td></tr></tbody></table>`;
+  } else if(by==='item'){
+    const rs=sortRows(rowsOf(lines),S.ui.qtoSort,S.ui.qtoDir);
+    const tot=rs.reduce((a,x)=>a+x.amt,0);
+    table=`<table><thead>${head()}</thead><tbody>${rs.map(tr).join('')}
+      <tr class="tot"><td colspan="5">Total</td><td class="n">${F.m(tot)}</td><td></td></tr></tbody></table>`;
+  } else {
+    const keyOf = l => by==='sheet' ? l.sheet : (Calc.dupa(l.item)?.unit || U.u(l.dim));
+    const groups=[...new Set(lines.map(keyOf))].sort((a,b)=>String(a).localeCompare(String(b)));
+    let out='', grand=0;
+    groups.forEach(g=>{
+      const rs=sortRows(rowsOf(lines.filter(l=>keyOf(l)===g)),S.ui.qtoSort,S.ui.qtoDir);
+      const sub=rs.reduce((a,x)=>a+x.amt,0); grand+=sub;
+      out+=`<tr class="grp"><td colspan="7">${F.esc(g)}</td></tr>`+rs.map(tr).join('')+
+           `<tr class="sum"><td colspan="5">Sub-total — ${F.esc(g)}</td><td class="n num">${F.m(sub)}</td><td></td></tr>`;
+    });
+    table=`<table><thead>${head()}</thead><tbody>${out}
+      <tr class="tot"><td colspan="5">Total</td><td class="n">${F.m(grand)}</td><td></td></tr></tbody></table>`;
+  }
+  return card('Quantity take-off summary','QTO',
+    `<div class="pad" style="padding-bottom:0"><p class="hint">Read-only, and it refreshes the moment you edit any take-off sheet or schedule. Change the grouping to read the same numbers a different way, click any column heading to sort, and use the search box to isolate a trade or a keyword.</p></div>
+     ${searchBar('qto','qtoQ','Search pay item, description or sheet…',controls)}
+     <div class="tw">${table}</div>`);
+};
+
+/* ── bill of materials ─────────────────────────────────────── */
+V.bom = () => {
+  const q=(S.ui.bomQ||'').toLowerCase();
+  let b=Calc.bom().map(x=>({...x,sources:[...x.from].join(', ')}));
+  const all=b.reduce((a,x)=>a+x.amt,0);
+  if(q) b=b.filter(x=>(x.name+' '+x.cat+' '+x.sources).toLowerCase().includes(q));
+  b=sortRows(b,S.ui.bomSort,S.ui.bomDir);
+  const tot=b.reduce((a,x)=>a+x.amt,0);
+  const body=b.map(x=>`<tr><td>${F.esc(x.name)}</td><td style="font-size:12px;color:var(--muted)">${F.esc(x.cat)}</td>
+    <td class="n num">${F.q(x.qty,2)}</td><td>${x.unit}</td>
+    <td class="n num">${F.m(x.rate)}</td><td class="n num calc">${F.m(x.amt)}</td>
+    <td style="font-size:12px;color:var(--muted)">${F.esc(x.sources)}</td></tr>`).join('');
+  const top=Calc.bom().sort((x,y)=>y.amt-x.amt)[0];
+  return `
+  ${kpi([{l:'Material cost',v:F.short(all),tone:'hi'},
+         {l:'Distinct materials',v:Calc.bom().length},
+         {l:'Largest single item',v:top?F.short(top.amt):'—',s:top?top.name:''}])}
+  ${card('Bill of materials','BOM',
+    `<div class="pad" style="padding-bottom:0"><p class="hint">Only take-off lines that carry a material basis appear here. If a scope looks light, check that its lines have a basis selected in the take-off sheet.</p></div>
+     ${searchBar('bom','bomQ','Search materials, categories or sources…',
+       `<span style="font-size:12px;color:var(--muted)">${b.length} shown · ${F.m(tot)}</span>`)}
+     <div class="tw"><table><thead><tr>${sortTh('bom','name','Material')}${sortTh('bom','cat','Category')}
+      ${sortTh('bom','qty','Quantity','n')}${sortTh('bom','unit','Unit')}
+      ${sortTh('bom','rate','Rate','n')}${sortTh('bom','amt','Amount','n')}
+      ${sortTh('bom','sources','Derived from')}</tr></thead>
+      <tbody>${body||'<tr><td colspan="7" style="padding:22px;text-align:center;color:var(--muted)">Nothing matches. Check that take-off lines carry a material basis.</td></tr>'}
+      <tr class="tot"><td colspan="5">Total shown</td><td class="n">${F.m(tot)}</td><td></td></tr>
+      </tbody></table></div>`)}`;
+};
+
+/* ── detailed unit price analysis ──────────────────────────── */
+V.dupa = () => {
+  const q=(S.ui.dupaQ||'').toLowerCase();
+  const list=q ? S.dupa.filter(d=>(d.item+' '+d.desc+' '+d.unit).toLowerCase().includes(q)) : S.dupa;
+  const body=list.map(d=>{
+    const b=Calc.dupaBid(d);
+    return `<tr>
+      <td style="width:110px">${inp('dupa',d.id,'item','text')}</td>
+      <td style="min-width:240px">${inp('dupa',d.id,'desc','text')}</td>
+      <td style="width:78px">${inp('dupa',d.id,'unit','text')}</td>
+      <td style="width:118px">${sel('dupa',d.id,'dim',[['A','Area'],['V','Volume'],['L','Length'],['M','Mass'],['EA','Count'],['LS','Lump sum']])}</td>
+      <td class="n" style="width:110px">${inp('dupa',d.id,'lab','money')}</td>
+      <td class="n" style="width:110px">${inp('dupa',d.id,'eqp','money')}</td>
+      <td class="n" style="width:118px">${inp('dupa',d.id,'mat','money')}</td>
+      <td class="n num calc" style="width:118px">${F.m(b.dc)}</td>
+      <td class="n num" style="width:100px">${F.m(b.om)}</td>
+      <td class="n num" style="width:100px">${F.m(b.pr)}</td>
+      <td class="n num" style="width:96px">${F.m(b.vt)}</td>
+      <td class="n num calc" style="width:126px"><b>${F.m(b.bid)}</b></td>
+      <td class="c">${del('dupa',d.id)}</td></tr>`;
+  }).join('');
+  return card('Detailed unit price analysis','DUPA',
+    `<div class="pad" style="padding-bottom:0">
+      <div class="note">Direct cost is labour plus equipment plus material for one unit. Mark-up is then applied at the project rates set on the settings sheet — currently <b>OCM ${S.cfg.ocm}%</b>, <b>profit ${S.cfg.profit}%</b> and <b>VAT ${S.cfg.vat}%</b> — giving the unit bid price the bill of quantities uses. Seed rates came from the firm's DUPA workbooks; re-validate them against current canvass before any submission.</div></div>
+     ${searchBar('dupa','dupaQ','Search pay item number or description…',
+       `<span style="font-size:12px;color:var(--muted)">${list.length} of ${S.dupa.length} pay items</span>`)}
+     <div class="tw"><table><thead><tr><th>Pay item</th><th>Description</th><th>Unit</th><th>Measures</th>
+      <th class="n">Labour</th><th class="n">Equipment</th><th class="n">Material</th><th class="n">Direct cost</th>
+      <th class="n">OCM</th><th class="n">Profit</th><th class="n">VAT</th><th class="n">Unit bid price</th><th></th></tr></thead>
+      <tbody>${body||'<tr><td colspan="13" style="padding:22px;text-align:center;color:var(--muted)">Nothing matches that search.</td></tr>'}</tbody></table></div>`,
+    `<button class="btn pri" onclick="App.add('dupa')">Add pay item</button>`);
+};
+
+/* ── outputs ───────────────────────────────────────────────── */
+V.boq = () => {
+  const t=Calc.totals();
+  const body=t.rows.map((r,i)=>`<tr>
+    <td class="n num" style="width:44px">${i+1}</td>
+    <td class="num" style="width:100px">${F.esc(r.item)}</td>
+    <td>${F.esc(r.desc)}</td>
+    <td class="n num">${F.q(U.out(r.qty,r.dim))}</td>
+    <td style="width:62px">${r.unit}</td>
+    <td class="n num">${F.m(r.bid)}</td>
+    <td class="n num calc">${F.m(r.amt)}</td></tr>`).join('');
+  const line=(l,v,c)=>`<tr class="sum"><td colspan="6">${l}</td><td class="n num${c?' calc':''}">${F.m(v)}</td></tr>`;
+  return `
+  ${kpi([
+    {l:'Direct cost',v:F.short(t.direct)},
+    {l:'OCM + profit',v:F.short(t.ocm+t.profit),s:S.cfg.ocm+'% + '+S.cfg.profit+'%'},
+    {l:'VAT',v:F.short(t.vat),s:S.cfg.vat+'%'},
+    {l:'Approved budget (ABC)',v:F.short(t.abc),tone:'hi'}
+  ])}
+  ${card('Bill of quantities','BOQ',
+   `<div class="tw"><table><thead><tr><th class="n">#</th><th>Pay item</th><th>Description of work</th>
+     <th class="n">Quantity</th><th>Unit</th><th class="n">Unit bid price</th><th class="n">Amount</th></tr></thead>
+     <tbody>${body}
+      ${line('Total direct cost',t.direct)}
+      ${line('Overhead, contingencies and miscellaneous — '+S.cfg.ocm+'%',t.ocm)}
+      ${line('Contractor\u2019s profit — '+S.cfg.profit+'%',t.profit)}
+      ${S.cfg.contingency>0?line('Contingency — '+S.cfg.contingency+'% of direct cost',t.cont):''}
+      ${line('Value added tax — '+S.cfg.vat+'%',t.vat)}
+      <tr class="tot"><td colspan="6">Approved budget for the contract</td><td class="n">${F.m(t.abc)}</td></tr>
+     </tbody></table></div>
+    <div class="pad"><p class="hint">Prepared by ${F.esc(S.meta.prep)} · checked by ${F.esc(S.meta.chk)} · ${F.esc(S.meta.ref)} rev. ${F.esc(S.meta.rev)} · ${F.esc(S.meta.date)}. Amounts shown in ${U.cur()}${S.cfg.currency==='USD'?' at ₱'+F.n(S.cfg.fx,2)+' to the dollar':''}.</p></div>`)}`;
+};
+
+V.cc = () => {
+  const t=Calc.totals();
+  let B=0,A=0,C=0;
+  const body=S.cc.map(r=>{
+    const bud=+r.bud||0, act=+r.act||0, com=+r.com||0;
+    const asg=act+com, avl=bud-asg, pu=bud?asg/bud*100:0;
+    B+=bud;A+=act;C+=com;
+    const cls=pu>100?'over':(pu>90?'near':'');
+    return `<tr><td style="min-width:180px">${inp('cc',r.id,'el','text')}</td>
+      <td class="n" style="width:140px">${inp('cc',r.id,'bud','money')}</td>
+      <td class="n" style="width:140px">${inp('cc',r.id,'act','money')}</td>
+      <td class="n" style="width:140px">${inp('cc',r.id,'com','money')}</td>
+      <td class="n num calc" style="width:140px">${F.m(asg)}</td>
+      <td class="n num" style="width:140px;color:${avl<0?'var(--bad)':'var(--good)'}">${F.m(avl)}</td>
+      <td style="width:150px"><div style="display:flex;align-items:center;gap:8px">
+        <div class="bar"><i class="${cls}" style="width:${Math.min(100,pu)}%"></i></div>
+        <span class="num" style="font-size:12px">${F.n(pu,1)}%</span></div></td>
+      <td class="c">${del('cc',r.id)}</td></tr>`;
+  }).join('');
+  const asg=A+C, avl=B-asg, pu=B?asg/B*100:0;
+  return `
+  ${kpi([
+    {l:'Budget',v:F.short(B)},
+    {l:'Actual cost',v:F.short(A)},
+    {l:'Open commitment',v:F.short(C),s:'purchase orders not yet invoiced'},
+    {l:'Available',v:F.short(avl),tone:avl<0?'warn':'ok'},
+    {l:'Budget used',v:F.n(pu,1)+'%',tone:pu>100?'warn':(pu>90?'':'ok')}
+  ])}
+  ${card('Cost control by cost element','SAP view',
+   `<div class="pad" style="padding-bottom:0"><p class="hint">Assigned cost is actual plus open commitment — the figure that tells you what the job has really consumed, not just what has been invoiced. Available is what is left of the budget after both. Anything over 90% used turns amber, over budget turns red.</p></div>
+    <div class="tw"><table><thead><tr><th>Cost element</th><th class="n">Budget</th><th class="n">Actual</th>
+     <th class="n">Open commitment</th><th class="n">Assigned</th><th class="n">Available</th><th>% used</th><th></th></tr></thead>
+     <tbody>${body}
+     <tr class="tot"><td>Total</td><td class="n">${F.m(B)}</td><td class="n">${F.m(A)}</td><td class="n">${F.m(C)}</td>
+       <td class="n">${F.m(asg)}</td><td class="n">${F.m(avl)}</td><td class="n">${F.n(pu,1)}%</td><td></td></tr>
+     </tbody></table></div>`,
+   `<button class="btn pri" onclick="App.pullBudget()">Pull budget from the BOQ</button>
+    <button class="btn" onclick="App.add('cc')">Add cost element</button>
+    <span style="align-self:center;font-size:12px;color:var(--muted)">BOQ direct cost is ${F.m(t.direct)}</span>`)}`;
+};
+
+V.bill = () => {
+  const rows=Calc.boq(); S.bill.prev=S.bill.prev||{}; S.bill.now=S.bill.now||{};
+  let cPrev=0,cNow=0,cCtr=0;
+  const body=rows.map(r=>{
+    const p=+(S.bill.prev[r.item]||0), n=+(S.bill.now[r.item]||0), td=p+n;
+    const ctr=r.amt; cCtr+=ctr; cPrev+=ctr*p/100; cNow+=ctr*n/100;
+    return `<tr><td class="num" style="width:96px">${F.esc(r.item)}</td>
+      <td>${F.esc(r.desc)}</td>
+      <td class="n num" style="width:110px">${F.m(ctr)}</td>
+      <td class="n" style="width:82px"><input class="cell n" type="number" step="any" value="${p}"
+        onchange="App.bill('prev','${r.item}',this.value)"></td>
+      <td class="n" style="width:82px"><input class="cell n" type="number" step="any" value="${n}"
+        onchange="App.bill('now','${r.item}',this.value)"></td>
+      <td class="n num calc" style="width:78px">${F.n(td,1)}%</td>
+      <td class="n num" style="width:120px">${F.m(ctr*n/100)}</td>
+      <td class="n num" style="width:120px">${F.m(ctr*td/100)}</td></tr>`;
+  }).join('');
+  const toDate=cPrev+cNow;
+  const ret=toDate*(+S.bill.ret||0)/100;
+  const rec=S.bill.advOn ? cNow*(+S.bill.adv||0)/100 : 0;
+  const net=cNow-(cNow*(+S.bill.ret||0)/100)-rec;
+  return `
+  ${kpi([
+    {l:'Contract amount',v:F.short(cCtr)},
+    {l:'Accomplished to date',v:F.short(toDate),s:cCtr?F.n(toDate/cCtr*100,1)+'% of contract':''},
+    {l:'This period',v:F.short(cNow),tone:'hi'},
+    {l:'Net amount due',v:F.short(net),tone:'ok',s:'after retention and recoupment'}
+  ])}
+  ${card('Billing header','Billing no. '+S.bill.no,`<div class="pad"><div class="fgrid">
+    <div class="f"><label>Billing number</label><input type="number" value="${S.bill.no}" onchange="App.billCfg('no',this.value)"></div>
+    <div class="f"><label>Period from</label><input type="date" value="${S.bill.from||''}" onchange="App.billCfg('from',this.value)"></div>
+    <div class="f"><label>Period to</label><input type="date" value="${S.bill.to||''}" onchange="App.billCfg('to',this.value)"></div>
+    <div class="f"><label>Retention %</label><input type="number" step="any" value="${S.bill.ret}" onchange="App.billCfg('ret',this.value)"></div>
+    <div class="f"><label>Advance payment recoupment %</label><input type="number" step="any" value="${S.bill.adv}" onchange="App.billCfg('adv',this.value)"></div>
+    <div class="f"><label>Recoup advance this billing</label>
+      <select onchange="App.billCfg('advOn',this.value==='yes')">
+        <option value="yes" ${S.bill.advOn?'selected':''}>Yes</option>
+        <option value="no" ${!S.bill.advOn?'selected':''}>No</option></select></div>
+  </div>
+  <p class="hint" style="margin-top:12px">Retention under RA 9184 runs at 10% of progress payments until half the contract is done. Advance payment is capped at 15% of the contract and is recouped proportionally from each billing.</p></div>`)}
+  ${card('Statement of work accomplished','Progress billing',
+   `<div class="tw"><table><thead><tr><th>Pay item</th><th>Description</th><th class="n">Contract amount</th>
+     <th class="n">% previous</th><th class="n">% this period</th><th class="n">% to date</th>
+     <th class="n">Amount this period</th><th class="n">Amount to date</th></tr></thead>
+     <tbody>${body}
+     <tr class="sum"><td colspan="6">Gross amount this period</td><td class="n num">${F.m(cNow)}</td><td class="n num">${F.m(toDate)}</td></tr>
+     <tr class="sum"><td colspan="6">Less retention — ${S.bill.ret}%</td><td class="n num">${F.m(cNow*(+S.bill.ret||0)/100)}</td><td class="n num">${F.m(ret)}</td></tr>
+     <tr class="sum"><td colspan="6">Less recoupment of advance payment — ${S.bill.advOn?S.bill.adv+'%':'not applied'}</td><td class="n num">${F.m(rec)}</td><td class="n num">—</td></tr>
+     <tr class="tot"><td colspan="6">Net amount due this billing</td><td class="n">${F.m(net)}</td><td class="n">—</td></tr>
+     </tbody></table></div>
+    <div class="pad"><p class="hint">Submitted by ${F.esc(S.meta.prep)} · verified by ${F.esc(S.meta.chk)} · ${F.esc(S.meta.name)}, ${F.esc(S.meta.loc)}.</p></div>`)}`;
+};
+
+V.port = () => {
+  let C=0,B=0,K=0;
+  const body=S.port.map(p=>{
+    const ctr=+p.ctr||0,bld=+p.bld||0,cost=+p.cost||0;
+    C+=ctr;B+=bld;K+=cost;
+    const marg=bld?(bld-cost)/bld*100:0, prog=ctr?bld/ctr*100:0;
+    return `<tr><td style="width:100px">${inp('port',p.id,'code','text')}</td>
+      <td style="min-width:200px">${inp('port',p.id,'name','text')}</td>
+      <td class="n" style="width:140px">${inp('port',p.id,'ctr','money')}</td>
+      <td class="n" style="width:140px">${inp('port',p.id,'bld','money')}</td>
+      <td class="n" style="width:140px">${inp('port',p.id,'cost','money')}</td>
+      <td class="n num calc" style="width:120px">${F.m(bld-cost)}</td>
+      <td class="n num" style="width:82px"><span class="pill ${marg<0?'r':(marg<10?'y':'g')}">${F.n(marg,1)}%</span></td>
+      <td style="width:150px"><div style="display:flex;align-items:center;gap:8px">
+        <div class="bar"><i style="width:${Math.min(100,prog)}%"></i></div>
+        <span class="num" style="font-size:12px">${F.n(prog,0)}%</span></div></td>
+      <td style="width:120px">${sel('port',p.id,'st',['Tendering','Ongoing','Suspended','Completed'])}</td>
+      <td class="c">${del('port',p.id)}</td></tr>`;
+  }).join('');
+  const marg=B?(B-K)/B*100:0;
+  return `
+  ${kpi([
+    {l:'Contract value',v:F.short(C),tone:'hi'},
+    {l:'Billed to date',v:F.short(B),s:C?F.n(B/C*100,1)+'% of portfolio':''},
+    {l:'Cost incurred',v:F.short(K)},
+    {l:'Gross margin',v:F.short(B-K),tone:marg<0?'warn':'ok',s:F.n(marg,1)+'% on revenue'},
+    {l:'Live projects',v:S.port.filter(p=>p.st==='Ongoing').length+' / '+S.port.length}
+  ])}
+  ${card('Project portfolio','Multi-project',
+   `<div class="tw"><table><thead><tr><th>Code</th><th>Project</th><th class="n">Contract</th>
+     <th class="n">Billed to date</th><th class="n">Cost incurred</th><th class="n">Margin</th>
+     <th class="n">%</th><th>Progress</th><th>Status</th><th></th></tr></thead>
+     <tbody>${body}<tr class="tot"><td colspan="2">Portfolio total</td><td class="n">${F.m(C)}</td>
+     <td class="n">${F.m(B)}</td><td class="n">${F.m(K)}</td><td class="n">${F.m(B-K)}</td>
+     <td class="n">${F.n(marg,1)}%</td><td></td><td></td><td></td></tr></tbody></table></div>`,
+   `<button class="btn pri" onclick="App.add('port')">Add project</button>`)}`;
+};
+
+V.ref = () => {
+  const conv=[
+    ['Length','1 m','3.280840 ft','1 ft','0.304800 m'],
+    ['Area','1 m²','10.763910 ft²','1 ft²','0.092903 m²'],
+    ['Volume','1 m³','35.314667 ft³','1 cu.yd','0.764555 m³'],
+    ['Mass','1 kg','2.204623 lb','1 metric ton','1,000 kg'],
+    ['Volume','1 litre','0.264172 US gal','1 US gal','3.785412 litres'],
+    ['Stress','1 MPa','145.0377 psi','1,000 psi','6.894757 MPa'],
+    ['Cement','1 bag','40 kg (Philippine standard)','1 m³ cement','1,440 kg']
+  ];
+  const grpTable=(data,heads,cols)=>{
+    let out='',last='';
+    data.forEach(r=>{ if(r[0]!==last){ out+=`<tr class="grp"><td colspan="${heads.length}">${F.esc(r[0])}</td></tr>`; last=r[0]; }
+      out+='<tr>'+cols.map(c=>`<td class="${c.cls||''}">${c.f?c.f(r):F.esc(r[c.i])}</td>`).join('')+'</tr>'; });
+    return `<div class="tw"><table><thead><tr>${heads.map(h=>`<th class="${h[1]||''}">${h[0]}</th>`).join('')}</tr></thead><tbody>${out}</tbody></table></div>`;
+  };
+  return `
+  ${card('RA 9184 mark-up ceilings','Indicative',
+   `<div class="tw"><table><thead><tr><th>Contract cost band</th><th class="n">OCM</th><th class="n">Profit</th><th class="n">Combined</th></tr></thead>
+    <tbody>${MARKUP_TIERS.map(t=>`<tr><td>${t.label}</td><td class="n num">${t.ocm}%</td><td class="n num">${t.profit}%</td>
+      <td class="n num calc">${t.ocm+t.profit}%</td></tr>`).join('')}</tbody></table></div>
+    <div class="pad"><p class="hint">These bands follow the structure used in the RA 9184 IRR and the DPWH department orders on the approved budget for the contract. They are ceilings, not entitlements, and the department revises them — check the order in force for your procuring entity. VAT for government infrastructure is normally carried at 5% of direct cost plus mark-up; private work carries 12%.</p></div>`)}
+  ${card('Reinforcing bar grades','PNS 49 · ASTM A615 · NSCP 2015',
+   `<div class="tw"><table><thead><tr><th>Grade</th><th>PNS 49 designation</th><th class="n">f\u1d67 MPa</th>
+     <th>ASTM equivalent</th><th class="n">ASTM f\u1d67 MPa</th><th class="n">Min. tensile MPa</th>
+     <th>Common sizes</th><th>Where it is used</th></tr></thead><tbody>
+     ${GRADES.map(g=>`<tr><td><b>Grade ${g.g}</b></td><td>${g.pns}</td><td class="n num">${g.fy}</td>
+       <td>${g.astm}</td><td class="n num">${g.afy}</td><td class="n num">${g.ten}</td>
+       <td style="white-space:nowrap">${g.sizes}</td>
+       <td style="font-size:12px;color:var(--muted)">${g.use}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="pad"><p class="hint">Unit mass is identical across grades — a 16 mm bar weighs 1.578 kg/m whether it is Grade 33 or Grade 60. Grade changes the yield strength the designer relies on, and the mill price by roughly ₱2 to ₱4 a kilo.</p></div>`)}
+  ${card('NSCP 2015 / PNS 49 reinforcing bars','Unit mass',
+   `<div class="tw"><table><thead><tr><th class="n">Nominal Ø, mm</th><th class="n">Unit mass, kg/m</th>
+     <th class="n">Area, mm²</th><th class="n">Per 6 m, kg</th><th class="n">Per 9 m, kg</th><th class="n">Per 12 m, kg</th></tr></thead>
+     <tbody>${REBAR.map(x=>`<tr><td class="n num"><b>${x.d}</b></td><td class="n num">${x.w.toFixed(3)}</td>
+       <td class="n num">${F.n(Math.PI*x.d*x.d/4,1)}</td><td class="n num">${(x.w*6).toFixed(2)}</td>
+       <td class="n num">${(x.w*9).toFixed(2)}</td><td class="n num">${(x.w*12).toFixed(2)}</td></tr>`).join('')}
+     </tbody></table></div>`)}
+  ${card('Labour productivity','Three-worker crew, average output',
+   grpTable(PRODUCTIVITY,[['Activity'],['Output','n'],['Unit']],
+     [{i:1},{i:2,cls:'n num',f:r=>F.n(r[2],3)},{i:3}]))}
+  ${card('Pakyawan labour guide','Subcontract rates per unit',
+   grpTable(PAKYAW,[['Activity'],['Rate','n'],['Per']],
+     [{i:1},{i:2,cls:'n num',f:r=>F.m(r[2])},{i:3}]))}
+  ${card('Unit conversions','Metric ↔ imperial',
+   `<div class="tw"><table><thead><tr><th>Quantity</th><th>Metric</th><th>Imperial</th><th>Imperial</th><th>Metric</th></tr></thead>
+    <tbody>${conv.map(c=>`<tr><td>${c[0]}</td><td class="num">${c[1]}</td><td class="num">${c[2]}</td>
+      <td class="num">${c[3]}</td><td class="num">${c[4]}</td></tr>`).join('')}</tbody></table></div>`)}`;
+};
+
+/* ── 10. Controller ────────────────────────────────────────── */
+const App = {
+  view: 'setup',
+
+  rail(show){ S.ui.rail=!!show; App.render();
+    if(show){ const b=document.querySelector('.railclose'); if(b) b.focus(); }
+    else { const b=document.getElementById('railShow'); if(b) b.focus(); } },
+
+  go(id){ App.view=id; S.ui._focus=null; App.render();
+          window.scrollTo({top:0,behavior:'auto'});
+          document.body.classList.remove('nav-open'); },
+
+  render(){
+    const MODS=modules();
+    if(!MODS.some(m=>m.id===App.view)) App.view='setup';
+    document.body.classList.toggle('rail-off', S.ui.rail===false);
+
+    /* navigation */
+    const grps=[...new Set(MODS.map(m=>m.grp))];
+    document.getElementById('nav').innerHTML = grps.map(g=>
+      `<div class="navgrp"><h4>${g}</h4>`+
+      MODS.filter(m=>m.grp===g).map(m=>
+        `<button class="navbtn ${m.id===App.view?'on':''}" onclick="App.go('${m.id}')">
+           <span class="cd">${m.code}</span><span>${F.esc(m.name)}</span></button>`).join('')+
+      (g==='Take-off'
+        ? `<button class="navbtn" style="color:var(--signal)" onclick="App.newScope()">
+             <span class="cd">＋</span><span>New take-off sheet</span></button>` : '')+
+      `</div>`).join('');
+
+    /* title block */
+    const m=M(App.view)||MODS[0];
+    const g=(id,v)=>document.getElementById(id).textContent=v;
+    g('tbCode',m.code); g('tbGroup',m.grp); g('tbTitle',m.name); g('tbNote',m.note||'');
+    g('tbProj',S.meta.name||'—'); g('tbLoc',S.meta.loc||'—');
+    g('tbUnit',S.cfg.units==='metric'?'Metric (SI)':'Imperial');
+    g('tbCur',S.cfg.currency==='USD'?'USD @ ₱'+F.n(S.cfg.fx,2):'PHP (₱)');
+    g('tbPrep',S.meta.prep||'—'); g('tbChk',S.meta.chk||'—');
+    g('tbDate',S.meta.date||'—'); g('tbRev',S.meta.rev||'—');
+
+    /* save indicator */
+    const st=document.getElementById('saveState');
+    if(st){
+      const d=App.dirty();
+      st.className='savestate'+(d?' dirty':'');
+      st.textContent = d ? 'Unsaved changes'
+                         : (App._fh ? 'Saved · '+App._fh.name : 'Saved to file');
+    }
+    const sb=document.getElementById('btnSaveHTML');
+    if(sb) sb.textContent = App._fh ? 'Save' : 'Save to this file';
+
+    /* toolbar toggles */
+    document.querySelectorAll('#segUnit button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.cfg.units));
+    document.querySelectorAll('#segCur button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.cfg.currency));
+    const fx=document.getElementById('fxRate'); if(document.activeElement!==fx) fx.value=S.cfg.fx;
+
+    /* body */
+    let html='';
+    if(m.scope) html=V.takeoff(m.scope);
+    else if(V[m.id]) html=V[m.id]();
+    else html='<div class="card"><div class="pad">Module not available.</div></div>';
+    document.getElementById('sheet').innerHTML=html;
+
+    /* keep the caret where the person left it while typing in a search box */
+    if(S.ui._focus){
+      const el=document.getElementById(S.ui._focus);
+      if(el){ el.focus(); const v=el.value; el.value=''; el.value=v; }
+    }
+    persist();
+  },
+
+  /* generic row editing */
+  upd(path,id,key,val,kind){
+    const row=collOf(path).find(x=>x.id===id); if(!row) return;
+    if(kind==='len')        row[key]=U.in(parseFloat(val)||0,'L');
+    else if(kind==='money') row[key]=U.moneyIn(parseFloat(val)||0);
+    else if(kind==='num'||kind==='pct') row[key]=parseFloat(val)||0;
+    else row[key]=val;
+    App.render();
+  },
+  del(path,id){ const c=collOf(path); const i=c.findIndex(x=>x.id===id);
+    if(i>-1) c.splice(i,1); App.render(); },
+  add(path){
+    const c=collOf(path);
+    const T={ prices:{cat:'',name:'',unit:'',dim:'PC',rate:0},
+              dupa:{item:'SPL-'+String(S.dupa.length+1).padStart(2,'0'),desc:'New pay item',unit:'m²',dim:'A',lab:0,eqp:0,mat:0,on:true},
+              rebar:{el:'New element',pay:'',gr:'40',d:12,len:1,nb:1,n:1,lap:1.05},
+              cc:{el:'New cost element',bud:0,act:0,com:0},
+              port:{code:'PJ-'+(2400+S.port.length+1),name:'New project',ctr:0,bld:0,cost:0,st:'Tendering'} };
+    const row={id:uid('x'),...(T[path]||{})};
+    c.push(row);
+    if(path==='prices'){ S.ui.priceQ=''; S.ui.priceCats=[]; }
+    App.render();
+    if(path==='prices'){
+      const el=document.querySelector('#sheet tbody tr:last-child input');
+      if(el){ el.focus(); if(el.scrollIntoView) el.scrollIntoView({block:'center'}); }
+    }
+  },
+  addTake(sc){ (S.take[sc]=S.take[sc]||[]).push(
+      {id:uid('t'),desc:'New line',pay:'',mode:'A',l:0,w:0,h:0,n:1,f:1,basis:''}); App.render(); },
+  dupTake(sc){ const a=S.take[sc]||[]; if(!a.length) return App.addTake(sc);
+      a.push({...a[a.length-1],id:uid('t')}); App.render(); },
+  addCoefItem(cid){
+    const c=S.coef.find(x=>x.id===cid); if(!c) return;
+    const nm=document.getElementById('cf_'+cid).value;
+    const q=parseFloat(document.getElementById('cq_'+cid).value)||0;
+    const ex=c.items.find(i=>i[0]===nm); if(ex) ex[1]=q; else c.items.push([nm,q]);
+    App.render();
+  },
+  delCoefItem(cid,i){ const c=S.coef.find(x=>x.id===cid); if(c){ c.items.splice(i,1); App.render(); } },
+
+  /* take-off sheets */
+  newScope(){
+    const n=S.scopes.filter(s=>s.custom).length+1;
+    const id='cs'+Date.now().toString(36);
+    S.scopes.push({id, code:'', name:'Custom take-off '+n, custom:true,
+      note:'Give this sheet a name and a pay item range, then add lines the same way as any other take-off sheet.'});
+    S.take[id]=[];
+    App.go('tk_'+id);
+  },
+  scopeSet(id,key,val){ const s=S.scopes.find(x=>x.id===id); if(s){ s[key]=val; App.render(); } },
+  delScope(id){
+    const s=S.scopes.find(x=>x.id===id); if(!s||!s.custom) return;
+    const n=(S.take[id]||[]).length;
+    if(!confirm('Delete "'+s.name+'"'+(n?' and its '+n+' line'+(n>1?'s':''):'')+'? This cannot be undone.')) return;
+    S.scopes=S.scopes.filter(x=>x.id!==id); delete S.take[id];
+    App.go('setup');
+  },
+
+  catFilter(c){
+    if(c==='__all__'){ S.ui.priceCats=[]; }
+    else { const set=new Set(S.ui.priceCats||[]);
+           set.has(c) ? set.delete(c) : set.add(c);
+           S.ui.priceCats=[...set]; }
+    S.ui._focus=null; App.render();
+  },
+
+  /* price list categories */
+  catPick(id,val){
+    if(val==='__new__'){ S.ui.newCat=id; S.ui._focus='newcat_'+id; App.render(); return; }
+    const p=S.prices.find(x=>x.id===id); if(p) p.cat=val;
+    S.ui.newCat=null; App.render();
+  },
+  setCat(id,val){
+    const p=S.prices.find(x=>x.id===id);
+    const name=String(val||'').trim();
+    if(p && name){
+      const match=categories().find(c=>c.toLowerCase()===name.toLowerCase());
+      p.cat = match || name;          /* fold an existing name back in, whatever the casing */
+    }
+    S.ui.newCat=null; S.ui._focus=null; App.render();
+  },
+
+  /* view state */
+  uiSet(k,v){ S.ui[k]=v; S.ui._focus=null; App.render(); },
+  filter(k,v,focusId){ S.ui[k]=v; S.ui._focus=focusId; App.render(); },
+  sort(view,key){
+    if(S.ui[view+'Sort']===key) S.ui[view+'Dir'] = S.ui[view+'Dir']==='asc'?'desc':'asc';
+    else { S.ui[view+'Sort']=key; S.ui[view+'Dir']='asc'; }
+    S.ui._focus=null; App.render();
+  },
+
+  /* settings */
+  meta(k,v){ S.meta[k]= (k==='storeys')?(parseInt(v)||1):v; App.render(); },
+  cfg(k,v){ S.cfg[k]=parseFloat(v)||0; App.render(); },
+  mix(k,v,dim){ S.mix[k]= dim ? U.in(parseFloat(v)||0,dim) : (parseFloat(v)||0); App.render(); },
+  units(v){ S.cfg.units=v; App.render(); },
+  currency(v){ S.cfg.currency=v; App.render(); },
+  billCfg(k,v){ S.bill[k]= (k==='from'||k==='to')?v : (k==='advOn'? v : (parseFloat(v)||0)); App.render(); },
+  bill(which,item,v){ S.bill[which]=S.bill[which]||{}; S.bill[which][item]=parseFloat(v)||0; App.render(); },
+  applyTier(){ const t=Calc.totals();
+    const tier=MARKUP_TIERS.find(x=>t.direct<=x.upto)||MARKUP_TIERS[3];
+    S.cfg.ocm=tier.ocm; S.cfg.profit=tier.profit; App.render(); },
+  pullBudget(){
+    const rows=Calc.boq(); const t=Calc.totals();
+    const sum=k=>rows.reduce((a,r)=>{const d=Calc.dupa(r.item); return a+(d?r.qty*(+d[k]||0):0);},0);
+    const set=(name,val)=>{ const e=S.cc.find(x=>x.el.toLowerCase().startsWith(name.toLowerCase()));
+      if(e) e.bud=val; else S.cc.push({id:uid('c'),el:name,bud:val,act:0,com:0}); };
+    set('Materials',sum('mat')); set('Labour',sum('lab')); set('Equipment',sum('eqp'));
+    set('Site overhead',t.ocm);
+    App.render();
+  },
+  reset(){ if(confirm('Replace everything with the sample project? Save a project file first if you need this work.')){
+    S=seedState(); App.render(); } },
+
+  /* ── saving into the .html file itself ───────────────────────
+     A page cannot overwrite the file it was opened from — browsers
+     forbid it. Two routes around that:
+       · Chrome and Edge expose the File System Access API, which lets
+         the person pick a file once and then be written to directly.
+       · Everywhere else, the app hands over a fresh .html download
+         that already contains the data.
+     Either way the result is one self-contained file: open it and the
+     project is there, no separate .json to keep alongside it. */
+
+  toast(msg,bad){
+    const el=document.getElementById('toast'); if(!el) return;
+    el.textContent=msg; el.className='on'+(bad?' bad':'');
+    clearTimeout(App._toast);
+    App._toast=setTimeout(()=>{ el.className=''; },bad?5200:2800);
+  },
+
+  payload(){
+    const p=JSON.parse(JSON.stringify(S));
+    delete p.ui;                                   /* view state is not project data */
+    p.meta=p.meta||{}; p.meta.savedAt=Date.now();
+    p.__docId='dw'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    return p;
+  },
+
+  buildHTML(){
+    const p=App.payload();
+    /* Escape anything that could close the script element early. */
+    const json=JSON.stringify(p)
+      .replace(/</g,'\\u003c').replace(/>/g,'\\u003e')
+      .replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');
+    /* Split rather than regex-replace: the app's own source mentions the
+       marker too, and indexOf takes the first occurrence, which is the real
+       block because it is written above the app script in the document. */
+    /* Both tags are assembled from pieces. A literal closing script tag in
+       this source would end the script element while the browser is still
+       parsing the page, which silently kills the whole app. */
+    const OPEN='<'+'script id="darkwiz-project" type="application/json">';
+    const CLOSE='<'+'/'+'script>';
+    const i=PRISTINE.indexOf(OPEN);
+    if(i<0) throw new Error('the data block is missing from this page');
+    const j=PRISTINE.indexOf(CLOSE,i+OPEN.length);
+    if(j<0) throw new Error('the data block is not closed');
+    let out=PRISTINE.slice(0,i+OPEN.length)+json+PRISTINE.slice(j);
+    const label=[S.meta.ref,S.meta.client].filter(Boolean).join(' · ');
+    out=out.replace(/<title>[\s\S]*?<\/title>/,
+      '<title>'+F.esc(label||'DARKWIZ QS')+' — DARKWIZ QS</title>');
+    App._saved=JSON.stringify({...p,meta:{...p.meta,savedAt:0},__docId:0});
+    return '<!DOCTYPE html>\n'+out;
+  },
+
+  dirty(){
+    if(!App._saved) return true;
+    const p=JSON.parse(JSON.stringify(S)); delete p.ui;
+    return JSON.stringify({...p,meta:{...p.meta,savedAt:0},__docId:0}) !== App._saved;
+  },
+
+  async saveHTML(asNew){
+    let html;
+    try{ html=App.buildHTML(); }
+    catch(e){ App.toast('Could not build the file: '+e.message,true); return; }
+
+    if(asNew) App._fh=null;
+
+    if(window.showSaveFilePicker){
+      try{
+        if(!App._fh){
+          App._fh=await window.showSaveFilePicker({
+            suggestedName:App.fileName('.html'),
+            types:[{description:'DARKWIZ QS project',accept:{'text/html':['.html']}}]
+          });
+        }
+        const w=await App._fh.createWritable();
+        await w.write(html); await w.close();
+        App.render();
+        App.toast('Saved to '+App._fh.name);
+        return;
+      }catch(e){
+        if(e && e.name==='AbortError'){ App._saved=null; return; }
+        App._fh=null;   /* fall through to a plain download */
+      }
+    }
+    try{
+      const a=document.createElement('a');
+      const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+      a.href=URL.createObjectURL(blob); a.download=App.fileName('.html');
+      a.click(); URL.revokeObjectURL(a.href);
+      App.render();
+      App.toast('Saved as '+App.fileName('.html')+' — open that file to pick this project up again.');
+    }catch(e){ App._saved=null; App.toast('The browser blocked the download: '+e.message,true); }
+  },
+
+  /* files */
+  fileName(ext){
+    /* Reference No. - Client/Owner - Date */
+    const safe = v => String(v||'').trim()
+      .replace(/[\\/:*?"<>|]/g,'-')      /* characters Windows will not accept */
+      .replace(/\s+/g,' ').replace(/-+/g,'-').replace(/^-|-$/g,'');
+    const parts=[safe(S.meta.ref)||'DARKWIZ-EST',
+                 safe(S.meta.client)||'Unnamed client',
+                 safe(S.meta.date)||new Date().toISOString().slice(0,10)];
+    return parts.join(' - ')+ext;
+  },
+  saveFile(){
+    const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=App.fileName('.json');
+    a.click(); URL.revokeObjectURL(a.href);
+  },
+  loadFile(el){
+    const f=el.files&&el.files[0]; if(!f) return;
+    const r=new FileReader();
+    r.onload=()=>{
+      try{
+        const txt=String(r.result||'');
+        let raw;
+        if(/^\s*[\[{]/.test(txt)) raw=txt;                 /* a .json project */
+        else{                                              /* a saved .html    */
+          const m=txt.match(/<script id="darkwiz-project"[^>]*>([\s\S]*?)<\/script>/);
+          if(!m) throw new Error('no project data found in that page');
+          raw=m[1].trim();
+          if(!raw||raw==='null') throw new Error('that file was saved without a project in it');
+        }
+        const parsed=JSON.parse(raw); delete parsed.__docId;
+        const o=migrate(parsed);
+        if(!o) throw new Error('the data is not in a shape this version understands');
+        S=o; App._fh=null; App._saved=null;
+        App.go('setup');
+        App.toast('Opened '+f.name);
+      }
+      catch(e){ App.toast('Could not open that file: '+e.message,true); }
+      el.value='';
+    };
+    r.readAsText(f);
+  },
+  exportCSV(){
+    const m=M(App.view);
+    const tables=[...document.querySelectorAll('#sheet table')];
+    if(!tables.length){ alert('This sheet has no table to export. Try the BOQ, QTO or bill of materials.'); return; }
+    const esc=s=>{ s=String(s).replace(/\s+/g,' ').replace(/[▲▼]/g,'').trim();
+                   return /[",]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+    let out=[[esc(S.meta.name)],[esc(S.meta.loc)],
+             [esc(m.name+' — '+S.meta.ref+' rev.'+S.meta.rev+' — '+S.meta.date)],
+             [esc('Units: '+(S.cfg.units==='metric'?'Metric':'Imperial')+'; Currency: '+S.cfg.currency)],[]];
+    tables.forEach(t=>{
+      [...t.rows].forEach(tr=>{
+        out.push([...tr.cells].map(td=>{
+          const f=td.querySelector('input,select');
+          if(f) return esc(f.tagName==='SELECT'?(f.selectedOptions[0]?f.selectedOptions[0].text:''):f.value);
+          const mny=td.querySelector('.money');
+          if(mny) return esc(mny.querySelector('i').textContent+' '+mny.querySelector('b').textContent);
+          return esc(td.textContent);
+        }));
+      });
+      out.push([]);
+    });
+    const csv='\ufeff'+out.map(r=>r.join(',')).join('\r\n');
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+    a.download=App.fileName(' - '+m.name+'.csv'); a.click(); URL.revokeObjectURL(a.href);
+  }
+};
+
+/* ── 11. Boot ──────────────────────────────────────────────── */
+/* Snapshot the untouched document. Saving rewrites this, not the live DOM,
+   so a saved file opens on the settings sheet rather than mid-edit. */
+const PRISTINE = document.documentElement.outerHTML;
+
+/* If this file was opened with data already in it, that data is by
+   definition saved — start the indicator clean rather than dirty. */
+if(EMBED){
+  try{
+    const p=JSON.parse(JSON.stringify(S)); delete p.ui;
+    App._saved=JSON.stringify({...p,meta:{...p.meta,savedAt:0},__docId:0});
+  }catch(e){}
+}
+
+document.querySelectorAll('#segUnit button').forEach(b=>b.onclick=()=>App.units(b.dataset.v));
+document.querySelectorAll('#segCur button').forEach(b=>b.onclick=()=>App.currency(b.dataset.v));
+document.getElementById('fxRate').addEventListener('change',e=>App.cfg('fx',e.target.value));
+window.addEventListener('keydown',e=>{
+  if(e.altKey && !e.ctrlKey && !e.metaKey){
+    const MODS=modules(), i=MODS.findIndex(x=>x.id===App.view);
+    if(e.key==='ArrowDown'&&i<MODS.length-1){e.preventDefault();App.go(MODS[i+1].id);}
+    if(e.key==='ArrowUp'&&i>0){e.preventDefault();App.go(MODS[i-1].id);}
+  }
+});
+App.render();
+
+/* expose for console debugging and for inline handlers in strict embeds */
+Object.assign(window,{App,Calc,F,U,modules,GRADES,REBAR,MIXES,DEFAULT_SCOPES,seedState,migrate,EMBED,DOC_ID,SKEY,
+  __state:()=>S, __setState:o=>{S=o;}});
+
+</script>
+</body>
+</html>
