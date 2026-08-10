@@ -36,6 +36,10 @@ and it falls back to system fonts if that is blocked.
 
 ## Modules
 
+**Dashboard** — the first group in the sidebar: cost control, progress billing
+and the portfolio view, plus a **QS Reports** button that opens
+`qsreports.darkwizlab.com` in a new tab.
+
 **Set-up** — project title block, unit and currency system, RA 9184 mark-up
 structure, the **material database**, material coefficients, concrete mix design.
 
@@ -46,15 +50,16 @@ existing category in any casing folds back into it instead of creating a
 near-duplicate. New materials arrive blank at the bottom of the list, under an
 **Uncategorised** heading, so nothing is silently filed in the wrong place.
 
-**Take-off** — fifteen scope sheets, in construction sequence:
+**Take-off** — seventeen scope sheets, in construction sequence:
 
 | | | |
 |---|---|---|
 | General preparation | Earthworks | Concreting Works |
-| Formworks & scaffolding | Masonry & plaster | Roofing Works |
-| Drywall and ceiling works | Tiling works | Windows, glass and doors |
-| Painting works | Architectural finishes | Engineering finishes |
-| Plumbing works | Electrical works | Roads & drainage |
+| **Reinforcement bars** | Formworks & scaffolding | Masonry & plaster |
+| **Steel works** | Roofing Works | Drywall and ceiling works |
+| Tiling works | Windows, glass and doors | Painting works |
+| Architectural finishes | Engineering finishes | Plumbing works |
+| Electrical works | Roads & drainage | |
 
 **General preparation** covers everything before a shovel moves — mobilisation,
 bonds and insurances, permits, temporary facilities, the safety programme,
@@ -66,14 +71,18 @@ and trim — while **Engineering finishes** holds the remedial and protective
 items: waterproofing systems, insulation, expansion joints, epoxy grouting,
 crack injection and soil treatment.
 
+**Reinforcement bars** and **Steel works** are described in their own sections
+below — both are measured by weight and both feed the QTO, the bill of
+materials and the BOQ like any other sheet.
+
 **+ New take-off sheet** at the bottom of the Take-off group creates a custom
 sheet. Name it, give it a pay item range, and it behaves like any built-in sheet —
 feeding the QTO, BOQ and billing automatically. Custom sheets can be deleted;
 built-in ones can be renamed but not removed.
 
-**Analysis** — quantity take-off summary, bill of materials, detailed unit price
-analysis, and the rebar schedule. All are searchable, and the QTO regroups four
-ways:
+**Analysis** — quantity take-off summary, bill of materials, **bill of
+quantities**, detailed unit price analysis, and the rebar schedule. All are
+searchable, and the QTO regroups four ways:
 
 - consolidate by pay item
 - group by take-off sheet, with sub-totals
@@ -82,13 +91,87 @@ ways:
 
 Every column heading sorts, and a source-sheet filter isolates one trade.
 
-**Output** — bill of quantities, SAP-style cost control (budget / actual / open
-commitment / assigned / available), progress billing with retention and advance
-recoupment, and a portfolio view across live projects.
-
 **Reference** — PNS 49 bar masses, **reinforcing bar grades (Grade 33, 40 and 60
 with their PNS and ASTM A615 equivalents)**, DPWH concrete classes, RA 9184
 mark-up ceilings, labour productivity, pakyawan rates and unit conversions.
+
+---
+
+## Reinforcement bars
+
+The reinforcement sheet sits between Concreting and Formworks, and it is where
+bars are measured — not the bar schedule, which only reads it back.
+
+Each line is counted one of three ways:
+
+| Method | Use it for | You give | It derives |
+|---|---|---|---|
+| **Count** | Main bars where the drawing states how many | cut length, bars per set, sets | total bars |
+| **Spacing** | Ties and stirrups | one bar's cut length, the run they cover, c/c spacing | bars per set = run ÷ spacing + 1 |
+| **Mesh** | Slabs and walls reinforced both ways | panel L × W, horizontal spacing, vertical spacing | both bar groups, counted separately |
+
+Horizontal spacing is the gap between horizontal bars — measured *up* the panel —
+and vertical spacing the gap between vertical bars measured *along* it, which is
+how a drawing note like "horizontal bars @ 200 o.c." reads. A mesh line therefore
+produces two bar groups, and the bar schedule shows them as two lines, which is
+what the bar bender needs.
+
+Per line you also set the bar diameter, the grade, a lap factor (1.05 for
+straight bar, 1.08 where column and beam laps are dense) and a **tie wire
+allowance in kg per 100 kg of steel** — 2% for main bars, 2.5% where ties and
+stirrups are close. That tie wire figure is what the bill of materials picks up,
+so the sheet and the bill can never disagree.
+
+Leave the pay item on **Auto** and it follows the storey count from the settings
+sheet: `902(1)a` for one storey, `902(1)b` for two to five.
+
+### The bar schedule under Analysis
+
+Read-only, and built entirely from the sheet above. It carries the bar groups,
+the cutting list by diameter with pieces at 6, 9 and 12 m, the procurement split
+by grade, and a tie-wire summary. The **Edit on the Reinforcement bars sheet**
+button takes you back to the measurement.
+
+If you are opening a file written by an earlier version, the old standalone
+rebar list converts into reinforcement take-off lines on first open. Nothing is
+lost, but check the lap factors afterwards.
+
+---
+
+## Steel works
+
+Between Masonry and Roofing. Everything structural and architectural in steel
+*except* roof framing, which stays on the Roofing Works sheet with the sheets it
+carries.
+
+Steel is measured by weight, because that is how it is bought, fabricated and
+paid for. Pick from thirty Philippine mill sections — H and I columns, beams and
+girders, channels, angles, tubulars, round bar, light-gauge furring and plate —
+and the unit mass fills itself in; anything not listed can be typed over.
+
+Two ways to measure a line: **length × unit mass** for sections and framing, and
+**direct mass per piece** for plates, gates, grilles, ladders and consumables.
+The factor column carries cutting waste and weld metal, usually 1.02 to 1.05.
+
+Seven kg-based pay items ship with it:
+
+| Item | Covers |
+|---|---|
+| SPL-S1 | Columns, beams and girders — fabricated and erected |
+| SPL-S2 | Base plates, gusset plates and stiffeners |
+| SPL-S3 | Gates, grilles and metal doors |
+| SPL-S4 | Railings, handrails and ladders |
+| SPL-S5 | Light-gauge channel and stud framing |
+| SPL-S6 | Welding consumables and cutting discs |
+| SPL-S7 | Anchor bolts, base plate grout and fasteners |
+
+Four material coefficient sets explode these into sections, plate, fabricated
+metalwork, welding rod, cutting discs, primer, grout and rivets. Note that the
+seeded consumables line and the welding rod inside the coefficient sets are two
+different views of the same thing — the BOQ prices the pay item, the bill of
+materials explodes the coefficients. They are parallel, not additive, but if you
+carry a separate consumables item in your own bills, decide which one you want
+and delete the other.
 
 ---
 
@@ -105,9 +188,9 @@ grade it is. Grade changes the yield strength the design relies on, and the mill
 price by roughly ₱2–4 a kilo. NSCP 2015 §421 bars Grade 33 from members
 resisting earthquake forces.
 
-The rebar schedule — now under **Analysis**, after the DUPA — carries a grade per
-element and reports a procurement split by grade, so the purchase order matches
-the bar list.
+The bar schedule — under **Analysis**, after the DUPA — carries a grade per bar
+line and reports a procurement split by grade, so the purchase order matches the
+bar list.
 
 ---
 
@@ -119,7 +202,8 @@ Material database ─┬─> Material coefficients ─> Bill of materials
 DUPA library ────────> Unit bid price ─┐
                                        ├─> Bill of quantities ─> Cost control
 Take-off sheets ──────> QTO summary ───┘                      └─> Progress billing
-Rebar schedule ───────────┘
+   │
+   └── Reinforcement bars ──> Bar schedule (read-only)
 ```
 
 ---
@@ -168,8 +252,10 @@ both `.html` and `.json` back.
 **Print / PDF** produces an A4 landscape sheet of the current module with the
 title block intact. **Export CSV** writes the current module's tables for Excel.
 
-The sidebar collapses with the **‹** button beside the logo, giving the sheet the
-full window width. **☰ Modules** in the toolbar brings it back.
+One button in the toolbar hides and shows the sidebar — it reads **‹ Hide
+sidebar** while the sidebar is out, and **☰ Show sidebar** once it is away, so
+there is only ever one control and it never moves. On a phone or tablet the same
+button opens and closes the drawer.
 
 ---
 
@@ -188,6 +274,14 @@ about 20 minutes, once.
 
 Publishing requires the GitHub Pages copy, because Google will not permit
 sign-in from a file opened off disk. Offline work with saved files is unaffected.
+
+---
+
+## Entering numbers
+
+Number boxes have no stepper arrows, so a long figure gets the full width of the
+box. Money boxes show grouped thousands and two decimals — and accept them on
+the way in, so `12,345,678.90` or `₱ 1 250 000` both parse correctly.
 
 ---
 
