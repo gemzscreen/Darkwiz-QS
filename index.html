@@ -35,17 +35,16 @@ body{
   background:var(--paper); -webkit-font-smoothing:antialiased;
 }
 button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+/* No stepper arrows anywhere — they eat the width a long figure needs. */
+input[type=number]{-moz-appearance:textfield;appearance:textfield}
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 a{color:var(--accent-lite)}
 
 /* ── layout ─────────────────────────────────────────── */
 .app{display:flex;min-height:100vh}
 body.rail-off{--rail:0px}
 body.rail-off .rail{display:none}
-.railclose{
-  border:1px solid #3C5064;background:transparent;color:#8FA3B6;width:24px;height:24px;
-  border-radius:3px;cursor:pointer;line-height:1;font-size:15px;padding:0;flex:0 0 auto;
-}
-.railclose:hover{background:#2C3D4F;color:#fff}
 .brand{display:flex;align-items:flex-start;gap:10px}
 .brand .bwrap{flex:1;min-width:0}
 .rail{
@@ -78,6 +77,15 @@ body.rail-off .rail{display:none}
   font-family:var(--f-num);font-size:9.5px;color:#6C8091;min-width:30px;
 }
 .navbtn.on .cd{color:var(--signal)}
+/* QS Reports — an outbound link, deliberately unlike the module buttons. */
+a.navbtn.qsr{
+  width:auto;margin:10px 12px 4px;padding:9px 13px;border-radius:4px;text-decoration:none;
+  background:linear-gradient(100deg,#C8940A,#9A7008);color:#1B1403;font-weight:600;
+  border-left:3px solid #FFD79A;box-shadow:0 1px 0 rgba(0,0,0,.35);
+}
+a.navbtn.qsr:hover{background:linear-gradient(100deg,#E0A70F,#B0800A);color:#120E02}
+a.navbtn.qsr .cd{color:#5A4304;min-width:20px;font-size:11px}
+a.navbtn.qsr .ext{margin-left:auto;font-size:11px;opacity:.7}
 .railfoot{padding:14px 18px 24px;font-size:11px;color:#5E7186;line-height:1.5}
 
 .main{flex:1;min-width:0;display:flex;flex-direction:column}
@@ -313,17 +321,13 @@ select.cell{background:var(--input);cursor:pointer}
 @media(max-width:1080px){.two{grid-template-columns:1fr}}
 
 /* ── responsive ─────────────────────────────────────── */
-.railtoggle{display:none}
-.railshow{display:none}
-body.rail-off .railshow{display:inline-flex;align-items:center;gap:6px}
+.railbtn{display:inline-flex;align-items:center;gap:6px;min-width:132px;justify-content:center}
 @media(max-width:900px){
-  .railshow,body.rail-off .railshow{display:none}
+  /* On a narrow screen the rail is a drawer, so it is never laid out inline. */
   body.rail-off .rail{display:block}
   body.rail-off{--rail:248px}
-  .railclose{display:none}
   .rail{position:fixed;left:0;top:0;transform:translateX(-100%);transition:transform .22s ease}
   body.nav-open .rail{transform:none;box-shadow:0 0 0 100vmax rgba(22,32,43,.45)}
-  .railtoggle{display:inline-flex;align-items:center;gap:6px}
   .titleblock{grid-template-columns:1fr}
   .tb-grid{border-left:0;border-top:1px solid var(--rule);grid-template-columns:repeat(2,1fr)}
   .tb-title{font-size:24px}
@@ -355,8 +359,6 @@ body.rail-off .railshow{display:inline-flex;align-items:center;gap:6px}
         <div class="mark">DARK<span>WIZ</span> QS</div>
         <div class="sub">Quantity Surveying Suite</div>
       </div>
-      <button class="railclose noprint" title="Hide the sidebar" aria-label="Hide the sidebar"
-              onclick="App.rail(false)">‹</button>
     </div>
     <div id="nav"></div>
     <div class="railfoot">
@@ -385,8 +387,7 @@ body.rail-off .railshow{display:inline-flex;align-items:center;gap:6px}
     </header>
 
     <div class="toolbar noprint">
-      <button class="tbtn railtoggle" onclick="document.body.classList.toggle('nav-open')">☰ Modules</button>
-      <button class="tbtn railshow" id="railShow" title="Show the sidebar" onclick="App.rail(true)">☰ Modules</button>
+      <button class="tbtn railbtn" id="railBtn" onclick="App.rail()">☰ Show sidebar</button>
       <div class="tgl"><b>Units</b>
         <div class="seg" id="segUnit">
           <button data-v="metric">Metric</button><button data-v="imperial">Imperial</button>
@@ -556,6 +557,7 @@ const SEED_PRICES = [
   ['Reinforcement','Deformed bar 25 mmØ x 6 m','pc','PC',1055],
   ['Reinforcement','Reinforcing steel (by weight)','kg','M',48],
   ['Reinforcement','G.I. tie wire #16','kg','M',95],
+  ['Reinforcement','Rebar chair / spacer','pc','PC',12],
   ['Masonry','CHB 100 mm (4")','pc','PC',16],
   ['Masonry','CHB 125 mm (5")','pc','PC',18],
   ['Masonry','CHB 150 mm (6")','pc','PC',20],
@@ -574,6 +576,13 @@ const SEED_PRICES = [
   ['Structural steel','Welding rod E6013','kg','M',180],
   ['Structural steel','Cutting disc 14"','pc','PC',300],
   ['Structural steel','Structural steel (fabricated, by weight)','kg','M',95],
+  ['Structural steel','H-beam / I-beam section (by weight)','kg','M',78],
+  ['Structural steel','Steel plate (by weight)','kg','M',82],
+  ['Structural steel','Fabricated metalwork \u2014 gates, grilles, railings (by weight)','kg','M',165],
+  ['Structural steel','Light-gauge channel / stud framing (by weight)','kg','M',88],
+  ['Structural steel','Anchor bolt with nut and washer','pc','PC',145],
+  ['Structural steel','Non-shrink grout, 25 kg','bag','BAG',850],
+  ['Structural steel','Epoxy primer, two-component','L','LTR',620],
   ['Roofing','Pre-painted rib-type sheet 0.5 mm','l.m.','L',480],
   ['Roofing','Corrugated G.I. sheet 0.5 mm','l.m.','L',380],
   ['Roofing','G.I. gutter 0.5 mm, with design','l.m.','L',550],
@@ -705,6 +714,13 @@ const SEED_DUPA = [
   ['SPL-E5','Termite and soil poisoning treatment','m²','A',18.00,1.80,42.00],
   ['SPL-E6','Anti-corrosion coating on embedded steel','m²','A',165.00,16.50,455.00],
   ['SPL-E7','Structural crack injection','m','L',420.00,42.00,860.00],
+  ['SPL-S1','Structural steel columns, beams and girders \u2014 fabricated and erected','kg','M',12.50,8.50,98.00],
+  ['SPL-S2','Base plates, gusset plates and stiffeners','kg','M',15.00,9.00,102.00],
+  ['SPL-S3','Steel gates, grilles and metal doors \u2014 fabricated','kg','M',42.00,12.00,145.00],
+  ['SPL-S4','Steel railings, handrails and ladders \u2014 fabricated','kg','M',38.00,10.50,138.00],
+  ['SPL-S5','Light-gauge channel and stud framing','kg','M',18.00,3.50,92.00],
+  ['SPL-S6','Welding consumables and cutting discs','kg','M',0,6.00,185.00],
+  ['SPL-S7','Anchor bolts, base plate grout and fasteners','kg','M',22.00,4.00,165.00],
   ['1047(1)','Structural steel — miscellaneous roof framing','kg','M',7.50,12.00,105.00],
   ['SPL-R1','Sagrods, turnbuckles and cross bracing','kg','M',6.80,9.50,118.00],
   ['SPL-R2','Steel deck / ceiling joist framing','kg','M',6.20,8.40,98.00],
@@ -735,6 +751,19 @@ const SEED_COEF = [
     ['Portland cement, 40 kg',7.2],['Washed sand',0.50],['Gravel 3/4"',1.00]]},
   {id:'conc_C', name:'Concrete Class C (1:3:6)', drv:'m³', items:[
     ['Portland cement, 40 kg',6.0],['Washed sand',0.50],['Gravel 3/4"',1.00]]},
+  {id:'rb_bar', name:'Reinforcing bar — per kg placed', drv:'kg', items:[
+    ['Reinforcing steel (by weight)',1.00],['Rebar chair / spacer',0.06]]},
+  {id:'stl_frame', name:'Structural steel frame — per kg fabricated', drv:'kg', items:[
+    ['H-beam / I-beam section (by weight)',1.03],['Welding rod E6013',0.012],
+    ['Cutting disc 14"',0.0008],['QDE / metal primer',0.006]]},
+  {id:'stl_plate', name:'Steel plate and anchors — per kg', drv:'kg', items:[
+    ['Steel plate (by weight)',1.05],['Welding rod E6013',0.020],
+    ['QDE / metal primer',0.008],['Non-shrink grout, 25 kg',0.010]]},
+  {id:'stl_misc', name:'Fabricated metalwork — per kg', drv:'kg', items:[
+    ['Fabricated metalwork \u2014 gates, grilles, railings (by weight)',1.02],
+    ['Welding rod E6013',0.018],['QDE / metal primer',0.010]]},
+  {id:'stl_lgf', name:'Light-gauge framing — per kg', drv:'kg', items:[
+    ['Light-gauge channel / stud framing (by weight)',1.05],['Blind rivet 1/8"',3.0]]},
   {id:'form_ply', name:'Formworks — phenolic, 3 reuses', drv:'m²', items:[
     ['Phenolic board 12 mm 4x8',0.11],['Coco lumber 2x2x10',0.65],['C.W. nails, assorted',0.14],['Form oil',0.05]]},
   {id:'chb100', name:'CHB 100 mm laying + mortar', drv:'m²', items:[
@@ -813,8 +842,50 @@ const MEAS = {
   L :{lbl:'Length  L×N',       dim:'L',  need:['l','n']},
   EA:{lbl:'Count  N',          dim:'EA', need:['n']},
   M :{lbl:'Mass  (direct kg)', dim:'M',  need:['n']},
-  LS:{lbl:'Lump sum',          dim:'LS', need:['n']}
+  LS:{lbl:'Lump sum',          dim:'LS', need:['n']},
+  /* Schedule-driven modes. These belong to their own sheets, which render
+     their own columns, so they are kept out of the generic mode picker. */
+  RB:{lbl:'Bar schedule (kg)', dim:'M',  need:['n'], own:true},
+  SW:{lbl:'Steel section (kg)',dim:'M',  need:['n'], own:true}
 };
+
+/* Reinforcement take-off — how the bars in a line are counted. */
+const RB_METH = [
+  ['count','Count — bars per set \u00d7 sets'],
+  ['space','Spacing — bars at c/c over a run'],
+  ['mesh', 'Mesh — two-way, H and V spacing']
+];
+const RB_EL = ['Footing','Pedestal','Column','Tie beam','Beam','Girder',
+               'Suspended slab','Slab on grade','Wall','Stair','Other'];
+
+/* Steel works — how a line converts to a mass. */
+const SW_BY = [
+  ['len','Length \u00d7 unit mass (kg/m)'],
+  ['pc', 'Direct mass per piece (kg)']
+];
+const SW_CLS = ['Column','Beam','Girder','Truss / frame','Base plate',
+                'Gusset / stiffener','Gate / grille','Railing / handrail',
+                'Ladder / catwalk','Light-gauge framing','Embedded / anchor',
+                'Consumable','Other'];
+
+/* Common Philippine mill sections — kg/m, for the section picker. */
+const SW_SECTIONS = [
+  ['W 150x150x7x10 (H-column)',31.5],['W 200x200x8x12 (H-column)',49.9],
+  ['W 250x250x9x14 (H-column)',72.4],['W 300x300x10x15 (H-column)',94.0],
+  ['W 200x100x5.5x8 (I-beam)',21.3],['W 250x125x6x9 (I-beam)',29.6],
+  ['W 300x150x6.5x9 (I-beam)',36.7],['W 350x175x7x11 (I-beam)',49.6],
+  ['W 400x200x8x13 (I-girder)',66.0],['W 450x200x9x14 (I-girder)',76.0],
+  ['C 150x75x6.5 (channel)',18.6],['C 200x80x7.5 (channel)',24.6],
+  ['L 50x50x6 (angle)',4.43],['L 65x65x6 (angle)',5.91],
+  ['L 75x75x6 (angle)',6.85],['L 100x100x10 (angle)',14.9],
+  ['Tubular 50x75x1.5 mm',2.75],['Tubular 50x100x2.0 mm',4.48],
+  ['Tubular 40x40x2.0 mm',2.31],['Tubular 50x50x2.0 mm',2.93],
+  ['Round bar 12 mm\u00d8',0.888],['Round bar 16 mm\u00d8',1.578],
+  ['Metal furring 0.6 mm',0.72],['Carrying channel 0.6 mm',1.06],
+  ['Metal stud 2x3, 0.6 mm',1.28],['Metal track 2x3, 0.6 mm',1.22],
+  ['Plate 6 mm (per m\u00b2)',47.1],['Plate 10 mm (per m\u00b2)',78.5],
+  ['Plate 12 mm (per m\u00b2)',94.2],['Plate 16 mm (per m\u00b2)',125.6]
+];
 
 const DEFAULT_SCOPES = [
   {id:'genprep',code:'B / GP',   name:'General preparation',
@@ -823,10 +894,14 @@ const DEFAULT_SCOPES = [
    note:'Clearing, structure excavation, backfill, gravel bedding and soil poisoning. Set the measurement mode per line.'},
   {id:'conc',  code:'900',      name:'Concreting Works',
    note:'Volumes by structural element. Link each line to a mix class so the bill of materials can explode cement, sand and gravel.'},
+  {id:'rbar',  code:'902',      name:'Reinforcement bars',
+   note:'Bar-by-bar take-off for footings, columns, beams, slabs and walls \u2014 counted directly, set out at a spacing, or laid as a two-way mesh with horizontal and vertical spacing. Lap allowance and G.I. tie wire are carried per line, and the bar schedule under Analysis is built from this sheet.'},
   {id:'form',  code:'903',      name:'Formworks & scaffolding',
    note:'Contact area of forms plus falsework. The reuse factor lives in the material coefficient set, not here.'},
   {id:'mas',   code:'1046-1027',name:'Masonry & plaster',
    note:'Wall areas by CHB thickness. Deduct openings as negative lines or with the factor column.'},
+  {id:'stl',   code:'SPL-S',    name:'Steel works',
+   note:'Fabricated and mill-supplied steel other than roof framing \u2014 H and I sections as columns, beams and girders, base and gusset plates, gates and grilles, railings and ladders, light-gauge channel framing behind drywall, and the welding consumables that go with them.'},
   {id:'roof',  code:'1013-1047',name:'Roofing Works',
    note:'Roof sheets and accessories together with the framing that carries them — trusses, purlins, sagrods and bracing, scheduled by member on this sheet.'},
   {id:'dryceil',code:'1003-1051',name:'Drywall and ceiling works',
@@ -956,6 +1031,61 @@ const DEF_ROWS = {
     ['Grouted riprap, Class A','900(1)','V',40,0.5,1.5,1,1.05]]
 };
 
+/* Reinforcement take-off seed — matches the concreting sheet element for
+   element, so the two read together. Lengths in metres, spacing in metres. */
+const DEF_RBAR = [
+  /* desc, element, pay, method, dia, grade, cut, bars/set, run, spacing,
+     panel L, panel W, spacing V, sets, lap, tie wire kg/100kg */
+  ['Footing F-1 \u2014 bottom bars, both ways','Footing','','mesh',16,'40',
+   0,0, 0,0, 1.80,1.80,0.15,0.15, 12,1.05,2.0],
+  ['Column C-1 \u2014 vertical bars','Column','','count',20,'60',
+   3.60,8, 0,0, 0,0,0,0, 12,1.08,2.0],
+  ['Column C-1 \u2014 lateral ties','Column','','space',10,'33',
+   1.45,0, 3.20,0.15, 0,0,0,0, 12,1.05,2.5],
+  ['Beam B-1 \u2014 top and bottom bars','Beam','','count',16,'60',
+   4.20,6, 0,0, 0,0,0,0, 24,1.08,2.0],
+  ['Beam B-1 \u2014 stirrups','Beam','','space',10,'33',
+   1.50,0, 4.00,0.20, 0,0,0,0, 24,1.05,2.5],
+  ['Suspended slab \u2014 main bars, both ways','Suspended slab','','mesh',12,'40',
+   0,0, 0,0, 20.0,15.0,0.20,0.20, 1,1.05,2.0],
+  ['Suspended slab \u2014 temperature bars','Suspended slab','','mesh',10,'33',
+   0,0, 0,0, 20.0,15.0,0.45,0.45, 1,1.05,2.0]
+];
+
+/* Steel works seed. Unit mass is kg/m for length-based lines and kg per
+   piece for direct-mass lines. */
+const DEF_STL = [
+  /* desc, pay, class, section, by, unit mass, length, no., factor, basis */
+  ['Steel column \u2014 W 200x200x8x12','SPL-S1','Column','W 200x200x8x12 (H-column)',
+   'len',49.9,3.60,8,1.02,'stl_frame'],
+  ['Roof / floor beam \u2014 W 300x150x6.5x9','SPL-S1','Beam','W 300x150x6.5x9 (I-beam)',
+   'len',36.7,6.00,12,1.02,'stl_frame'],
+  ['Transfer girder \u2014 W 400x200x8x13','SPL-S1','Girder','W 400x200x8x13 (I-girder)',
+   'len',66.0,8.00,2,1.02,'stl_frame'],
+  ['Bracing angle \u2014 L 75x75x6','SPL-S1','Truss / frame','L 75x75x6 (angle)',
+   'len',6.85,4.20,16,1.03,'stl_frame'],
+  ['Base plate 300x300x16 mm','SPL-S2','Base plate','Plate 16 mm (per m\u00b2)',
+   'pc',11.30,0,8,1.02,'stl_plate'],
+  ['Gusset and stiffener plates, 10 mm','SPL-S2','Gusset / stiffener','Plate 10 mm (per m\u00b2)',
+   'pc',6.20,0,24,1.05,'stl_plate'],
+  ['Anchor bolt set, 20 mm\u00d8 x 450 mm','SPL-S7','Embedded / anchor','Round bar 16 mm\u00d8',
+   'pc',1.90,0,32,1.00,'stl_plate'],
+  ['Steel gate, 3.00 x 2.00 m, with frame and hardware','SPL-S3','Gate / grille','Tubular 50x50x2.0 mm',
+   'pc',185.0,0,1,1.00,'stl_misc'],
+  ['Window grille \u2014 12 mm\u00d8 round bar','SPL-S3','Gate / grille','Round bar 12 mm\u00d8',
+   'pc',14.5,0,8,1.02,'stl_misc'],
+  ['Stair and balcony railing \u2014 40x40 tubular, painted','SPL-S4','Railing / handrail','Tubular 40x40x2.0 mm',
+   'len',4.62,12.0,1,1.05,'stl_misc'],
+  ['Cat ladder to roof deck','SPL-S4','Ladder / catwalk','Round bar 16 mm\u00d8',
+   'pc',62.0,0,1,1.00,'stl_misc'],
+  ['Metal furring behind drywall and ceiling','SPL-S5','Light-gauge framing','Metal furring 0.6 mm',
+   'len',0.72,5.00,120,1.05,'stl_lgf'],
+  ['Carrying channel, ceiling suspension','SPL-S5','Light-gauge framing','Carrying channel 0.6 mm',
+   'len',1.06,5.00,42,1.05,'stl_lgf'],
+  ['Welding rod E6013 and cutting discs','SPL-S6','Consumable','\u2014',
+   'pc',1.00,0,180,1.00,'']
+];
+
 const BASIS_MAP = {
   '900(1)c2':'conc_A','900(1)':'conc_A','903(2)':'form_ply',
   '1046(1)':'chb100','1046(2)':'chb150','1027(1)':'plaster',
@@ -964,6 +1094,27 @@ const BASIS_MAP = {
   '1032(1)a':'paint_mas','1014(2)':'roof_rib','1014(1)':'roof_rib'
 };
 
+/* One place that knows the shape of a reinforcement line and a steel line, so
+   seeding, "add row" and migration can never drift apart. */
+function rbarRow(o){
+  return Object.assign({id:uid('t'),desc:'New bar line',el:'Column',pay:'',mode:'RB',
+    meth:'count',d:12,gr:'40',len:0,nb:0,run:0,sp:0.15,l:0,w:0,sph:0.15,spv:0.15,
+    n:1,lap:1.05,tw:2.0,basis:'rb_bar'}, o||{});
+}
+function stlRow(o){
+  return Object.assign({id:uid('t'),desc:'New steel line',pay:'SPL-S1',mode:'SW',
+    cls:'Beam',sec:'',by:'len',um:0,len:0,n:1,f:1.02,basis:'stl_frame'}, o||{});
+}
+function seedRbar(){
+  return DEF_RBAR.map(r=>rbarRow({desc:r[0],el:r[1],pay:r[2],meth:r[3],d:r[4],gr:r[5],
+    len:r[6],nb:r[7],run:r[8],sp:r[9],l:r[10],w:r[11],sph:r[12],spv:r[13],
+    n:r[14],lap:r[15],tw:r[16]}));
+}
+function seedStl(){
+  return DEF_STL.map(r=>stlRow({desc:r[0],pay:r[1],cls:r[2],sec:r[3],by:r[4],
+    um:r[5],len:r[6],n:r[7],f:r[8],basis:r[9]}));
+}
+
 function seedState(){
   const prices = SEED_PRICES.map(p=>({id:uid('p'),cat:p[0],name:p[1],unit:p[2],dim:p[3],rate:p[4]}));
   const dupa = SEED_DUPA.map(d=>({id:uid('d'),item:d[0],desc:d[1],unit:d[2],dim:d[3],
@@ -971,6 +1122,8 @@ function seedState(){
   const scopes = JSON.parse(JSON.stringify(DEFAULT_SCOPES));
   const take={};
   scopes.forEach(s=>{
+    if(s.id==='rbar'){ take[s.id]=seedRbar(); return; }
+    if(s.id==='stl') { take[s.id]=seedStl();  return; }
     take[s.id]=(DEF_ROWS[s.id]||[]).map(r=>({
       id:uid('t'),desc:r[0],pay:r[1],mode:r[2],l:r[3],w:r[4],h:r[5],n:r[6],f:r[7],
       basis:BASIS_MAP[r[1]]||''
@@ -988,14 +1141,6 @@ function seedState(){
          bomQ:'', bomSort:'amt', bomDir:'desc', dupaQ:'', priceQ:'', priceCats:[],
          rail:true, newCat:null, _focus:null },
     scopes, prices, dupa, coef:JSON.parse(JSON.stringify(SEED_COEF)), take,
-    rebar:[
-      {id:uid('r'),el:'Footing F-1',pay:'',gr:'40',d:16,len:1.70,nb:8,n:12,lap:1.05},
-      {id:uid('r'),el:'Column C-1 main bars',pay:'',gr:'60',d:20,len:3.60,nb:8,n:12,lap:1.08},
-      {id:uid('r'),el:'Column C-1 ties',pay:'',gr:'33',d:10,len:1.45,nb:22,n:12,lap:1.05},
-      {id:uid('r'),el:'Beam B-1 main bars',pay:'',gr:'60',d:16,len:4.20,nb:6,n:24,lap:1.08},
-      {id:uid('r'),el:'Beam B-1 stirrups',pay:'',gr:'33',d:10,len:1.50,nb:18,n:24,lap:1.05},
-      {id:uid('r'),el:'Slab bars, both ways',pay:'',gr:'40',d:12,len:5.00,nb:120,n:2,lap:1.05}
-    ],
     mix:{ cem:1, sand:2, grav:4, vol:10, wc:0.53, dry:1.75, waste:5 },
     cc:[
       {id:uid('c'),el:'Materials',bud:0,act:2850000,com:1250000},
@@ -1106,7 +1251,38 @@ function migrate(o){
   /* re-file lines that now belong on a different sheet */
   reroute(o);
 
-  (o.rebar||[]).forEach(r=>{ if(r.pay===undefined) r.pay=''; if(!r.gr) r.gr = r.d>=16?'60':'40'; });
+  /* v3: the standalone rebar array becomes a take-off sheet of its own, so the
+     bar schedule under Analysis is a reading of measured work rather than a
+     second place to enter it. */
+  if(Array.isArray(o.rebar)){
+    const had=(o.take.rbar||[]).length;
+    if(o.rebar.length && !had){
+      o.take.rbar = o.rebar.map(r=>rbarRow({
+        desc:r.el||'Bar line', el:/footing/i.test(r.el||'')?'Footing'
+             :/column/i.test(r.el||'')?'Column'
+             :/beam/i.test(r.el||'')?'Beam'
+             :/slab/i.test(r.el||'')?'Suspended slab'
+             :/wall/i.test(r.el||'')?'Wall':'Other',
+        pay:r.pay||'', meth:'count', d:+r.d||12, gr:r.gr||(+r.d>=16?'60':'40'),
+        len:+r.len||0, nb:+r.nb||0, n:+r.n||1, lap:+r.lap||1.05, tw:2.0}));
+    }
+    delete o.rebar;
+  }
+  /* a file written before these sheets existed gets the worked seed, so the
+     sheet is not a blank page on first opening */
+  if(!Array.isArray(o.take.rbar) || (!o.take.rbar.length && !o.__rbarSeeded)){
+    if(!o.take.rbar || !o.take.rbar.length){ o.take.rbar=seedRbar(); o.__rbarSeeded=1; }
+  }
+  if(!Array.isArray(o.take.stl) || (!o.take.stl.length && !o.__stlSeeded)){
+    if(!o.take.stl || !o.take.stl.length){ o.take.stl=seedStl(); o.__stlSeeded=1; }
+  }
+  (o.take.rbar||[]).forEach(r=>{ const d=rbarRow({}); delete d.id;
+    Object.keys(d).forEach(k=>{ if(r[k]===undefined) r[k]=d[k]; }); r.mode='RB'; });
+  (o.take.stl ||[]).forEach(r=>{ const d=stlRow({}); delete d.id;
+    Object.keys(d).forEach(k=>{ if(r[k]===undefined) r[k]=d[k]; }); r.mode='SW'; });
+  /* coefficient sets added after earlier releases */
+  SEED_COEF.forEach(c=>{ if(!(o.coef||[]).some(x=>x.id===c.id))
+    o.coef.push(JSON.parse(JSON.stringify(c))); });
   o.bill = Object.assign({no:1,from:'',to:'',ret:10,adv:15,advOn:true,prev:{},now:{}}, o.bill||{});
   o.gs   = Object.assign({clientId:'',sheetId:'',lastPublish:''}, o.gs||{});
   return o;
@@ -1142,6 +1318,8 @@ const Calc = {
       case 'L': return l*n*f;
       case 'M': return n*f;
       case 'EA':case 'LS': return n*f;
+      case 'RB': return Calc.rbKg(r);
+      case 'SW': return Calc.stlKg(r);
       default: return 0;
     }
   },
@@ -1154,20 +1332,70 @@ const Calc = {
     const vt=(dc+om+pr)*(+S.cfg.vat||0)/100;
     return {dc,om,pr,vt,bid:dc+om+pr+vt};
   },
-  rebarKg(r){ const w=(REBAR.find(x=>x.d==r.d)||{w:0}).w;
-    return (+r.len||0)*(+r.nb||0)*(+r.n||0)*(+r.lap||1)*w; },
-  rebarPay(r){ return r.pay || ((+S.meta.storeys>1)?'902(1)b':'902(1)a'); },
+  unitMass(d){ return (REBAR.find(x=>x.d==d)||{w:0}).w; },
+  rbPay(r){ return r.pay || ((+S.meta.storeys>1)?'902(1)b':'902(1)a'); },
+
+  /* A reinforcement line expands into one or two bar groups. Everything else —
+     weight, tie wire, the QTO line, the bar schedule — is read off this. */
+  rbGroups(r){
+    const cut=+r.len||0, sets=+r.n||0, lap=+r.lap||1, w=Calc.unitMass(r.d);
+    const g=(dir,cutLen,per,sp)=>({dir,cut:cutLen,per,sets,
+      tot:per*sets, lap, m:cutLen*per*sets*lap, kg:cutLen*per*sets*lap*w, sp});
+    if(r.meth==='mesh'){
+      const lx=+r.l||0, ly=+r.w||0, sh=+r.sph||0, sv=+r.spv||0;
+      const out=[];
+      /* Horizontal bars run the length of the panel and stack up its height,
+         so their spacing is measured across W. Vertical bars are the mirror. */
+      if(lx>0 && sh>0) out.push(g('Horizontal \u2225 L', lx, Math.floor(ly/sh)+1, sh));
+      if(ly>0 && sv>0) out.push(g('Vertical \u2225 W',  ly, Math.floor(lx/sv)+1, sv));
+      return out;
+    }
+    if(r.meth==='space'){
+      const run=+r.run||0, sp=+r.sp||0;
+      const per = sp>0 ? Math.floor(run/sp)+1 : 0;
+      return per ? [g('At spacing', cut, per, sp)] : [];
+    }
+    return (+r.nb||0) ? [g('Counted', cut, +r.nb||0, 0)] : [];
+  },
+  rbKg(r){ return Calc.rbGroups(r).reduce((a,g)=>a+g.kg,0); },
+  rbLen(r){ return Calc.rbGroups(r).reduce((a,g)=>a+g.m,0); },
+  rbBars(r){ return Calc.rbGroups(r).reduce((a,g)=>a+g.tot,0); },
+  rbTie(r){ return Calc.rbKg(r)*(+r.tw||0)/100; },
+  rbTieTotal(){ return (S.take.rbar||[]).reduce((a,r)=>a+Calc.rbTie(r),0); },
+
+  /* The bar schedule, one line per bar group, ready to hand to the bar bender. */
+  barSchedule(){
+    const out=[];
+    (S.take.rbar||[]).forEach(r=>{
+      const w=Calc.unitMass(r.d), pay=Calc.rbPay(r);
+      Calc.rbGroups(r).forEach((g,i)=>out.push({
+        rid:r.id, mark:r.desc, el:r.el||'Other', part:g.dir, sp:g.sp,
+        d:+r.d, gr:r.gr, w, cut:g.cut, per:g.per, sets:g.sets, tot:g.tot,
+        lap:g.lap, m:g.m, kg:g.kg, pay, tw:g.kg*(+r.tw||0)/100, sub:i>0
+      }));
+    });
+    return out;
+  },
+
+  /* A steel line is a section mass times a length, or a mass per piece. */
+  stlKg(r){
+    const um=+r.um||0, n=+r.n||0, f=+r.f||1;
+    return (r.by==='len' ? um*(+r.len||0) : um) * n * f;
+  },
 
   /* every measured line, before any consolidation */
   qtoLines(){
     const out=[];
     S.scopes.forEach(sc=>(S.take[sc.id]||[]).forEach(r=>{
-      if(!r.pay) return;
-      out.push({sheet:sc.name,sheetId:sc.id,item:r.pay,desc:r.desc,
+      /* reinforcement falls back to the storey-dependent pay item */
+      const item = r.mode==='RB' ? Calc.rbPay(r) : r.pay;
+      if(!item) return;
+      const desc = r.mode==='RB' ? r.desc+' — '+r.d+' mmØ Grade '+r.gr
+                 : r.mode==='SW' && r.sec ? r.desc+' — '+r.sec
+                 : r.desc;
+      out.push({sheet:sc.name,sheetId:sc.id,item,desc,
                 qty:Calc.rowQty(r),dim:Calc.rowDim(r)});
     }));
-    S.rebar.forEach(r=>out.push({sheet:'Rebar schedule',sheetId:'rebar',item:Calc.rebarPay(r),
-      desc:r.el+' — '+r.d+' mmØ Grade '+r.gr,qty:Calc.rebarKg(r),dim:'M'}));
     return out;
   },
   qto(){
@@ -1235,11 +1463,15 @@ const Calc = {
         cur.qty+=drv*(+coef||0); cur.from.add(c.name); out.set(nm,cur);
       });
     });
-    const rk=S.rebar.reduce((a,r)=>a+Calc.rebarKg(r),0);
-    if(rk){ const p=S.prices.find(x=>x.name==='Reinforcing steel (by weight)');
-      out.set('Reinforcing steel (by weight)',{name:'Reinforcing steel (by weight)',unit:'kg',
+    /* Tie wire is measured per line on the reinforcement sheet rather than
+       through a coefficient, so the sheet and the bill agree exactly. */
+    const tw=Calc.rbTieTotal();
+    if(tw){ const p=S.prices.find(x=>x.name==='G.I. tie wire #16');
+      const cur=out.get('G.I. tie wire #16');
+      out.set('G.I. tie wire #16',{name:'G.I. tie wire #16',unit:p?p.unit:'kg',
         cat:p?p.cat:'Reinforcement',rate:p?p.rate:0,
-        qty:(out.get('Reinforcing steel (by weight)')?.qty||0)+rk,from:new Set(['Rebar schedule'])}); }
+        qty:(cur?cur.qty:0)+tw,
+        from:new Set([...(cur?cur.from:[]),'Reinforcement bars'])}); }
     const sk=(S.take.roof||[]).filter(r=>RE_ROOFST.test(String(r.pay||'')))
               .reduce((a,r)=>a+Calc.rowQty(r),0);
     if(sk){ const p=S.prices.find(x=>x.name==='Structural steel (fabricated, by weight)');
@@ -1452,6 +1684,12 @@ const Sheets = {
 /* ── 7. Modules and navigation ─────────────────────────────── */
 function modules(){
   return [
+   {id:'cc',    code:'D1', grp:'Dashboard', name:'Cost control',
+    note:'Budget against actual, open commitment and assigned cost — the SAP CJI3 view, by cost element.'},
+   {id:'bill',  code:'D2', grp:'Dashboard', name:'Progress billing',
+    note:'Accomplishment this period against contract quantities, less retention and advance-payment recoupment.'},
+   {id:'port',  code:'D3', grp:'Dashboard', name:'Portfolio',
+    note:'All live projects side by side — contract value, billed to date, cost incurred and margin.'},
    {id:'setup', code:'01', grp:'Set-up', name:'Project & settings',
     note:'Everything downstream reads from here — title block details, unit system, currency, and the RA 9184 mark-up structure.'},
    {id:'prices',code:'02', grp:'Set-up', name:'Material price list',
@@ -1466,19 +1704,13 @@ function modules(){
     note:'Every measured line, consolidated the way you want to read it — by pay item, by sheet, by unit, or line by line.'},
    {id:'bom',   code:'A2', grp:'Analysis', name:'Bill of materials',
     note:'Take-off quantities exploded into purchasable materials through the coefficient sets.'},
-   {id:'dupa',  code:'A3', grp:'Analysis', name:'Detailed unit price analysis',
-    note:'Labour, equipment and material per unit of each pay item, plus the mark-up build-up to the unit bid price.'},
-   {id:'rebar', code:'A4', grp:'Analysis', name:'Rebar schedule',
-    note:'Bar schedule by element and grade, with the procurement split by grade. Weights follow the PNS 49 unit mass table adopted in NSCP 2015.'},
-   {id:'boq',   code:'B1', grp:'Output', name:'Bill of quantities',
+   {id:'boq',   code:'A3', grp:'Analysis', name:'Bill of quantities',
     note:'Quantity × unit bid price by pay item, rolling up to the approved budget for the contract.'},
-   {id:'cc',    code:'B2', grp:'Output', name:'Cost control',
-    note:'Budget against actual, open commitment and assigned cost — the SAP CJI3 view, by cost element.'},
-   {id:'bill',  code:'B3', grp:'Output', name:'Progress billing',
-    note:'Accomplishment this period against contract quantities, less retention and advance-payment recoupment.'},
-   {id:'port',  code:'B4', grp:'Output', name:'Portfolio',
-    note:'All live projects side by side — contract value, billed to date, cost incurred and margin.'},
-   {id:'publish',code:'D1', grp:'Database', name:'Publish to Sheets',
+   {id:'dupa',  code:'A4', grp:'Analysis', name:'Detailed unit price analysis',
+    note:'Labour, equipment and material per unit of each pay item, plus the mark-up build-up to the unit bid price.'},
+   {id:'rebar', code:'A5', grp:'Analysis', name:'Rebar schedule',
+    note:'The bar schedule read off the Reinforcement bars take-off sheet — bar groups by element, diameter and grade, with the cutting list and the procurement split. Weights follow the PNS 49 unit mass table adopted in NSCP 2015.'},
+   {id:'publish',code:'G1', grp:'Database', name:'Publish to Sheets',
     note:'Send a snapshot of this project to the shared Google Sheet that feeds the reporting page. One way — the file on your machine stays the source of truth.'},
    {id:'ref',   code:'R1', grp:'Reference', name:'Standards & rates',
     note:'NSCP 2015 bar masses and grades, DPWH concrete classes, RA 9184 mark-up ceilings, labour productivity and pakyawan rates.'}
@@ -1493,11 +1725,18 @@ function inp(path,id,key,kind,extra){
   const row = collOf(path).find(x=>x.id===id) || {};
   let v = row[key];
   let cls='cell', step='', type='text';
+  let mode='';
   if(kind==='num'||kind==='money'||kind==='len'||kind==='pct'){ cls+=' n'; type='number'; step='any'; }
   if(kind==='len')   v = v===''||v==null ? '' : +(U.out(v,'L')).toFixed(4);
-  if(kind==='money') v = v===''||v==null ? '' : +(U.money(v)).toFixed(2);
   if(typeof v==='number' && kind==='num') v = +(+v).toFixed(4);
-  return `<input class="${cls}" type="${type}" ${step?'step="'+step+'"':''} value="${F.esc(v??'')}" ${extra||''}
+  /* Money reads as money: grouped thousands, two decimals, and a plain text
+     field so the figure is never squeezed by a stepper. Commas are stripped
+     again on the way back in. */
+  if(kind==='money'){
+    type='text'; step=''; cls+=' mny'; mode=' inputmode="decimal"';
+    v = v===''||v==null ? '' : F.n(U.money(v),2);
+  }
+  return `<input class="${cls}" type="${type}"${mode} ${step?'step="'+step+'"':''} value="${F.esc(v??'')}" ${extra||''}
     onchange="App.upd('${path}','${id}','${key}',this.value,'${kind}')">`;
 }
 function sel(path,id,key,opts,extra){
@@ -1526,7 +1765,7 @@ function kpi(list){
 }
 const payOpts = () => [['','— select pay item —'],...S.dupa.map(d=>[d.item, d.item+'  '+d.desc])];
 const coefOpts = () => [['','— none —'],...S.coef.map(c=>[c.id,c.name])];
-const modeOpts = () => Object.entries(MEAS).map(([k,v])=>[k,v.lbl]);
+const modeOpts = () => Object.entries(MEAS).filter(([,v])=>!v.own).map(([k,v])=>[k,v.lbl]);
 /* Real categories only — a blank is a material waiting to be filed, not a group. */
 const categories = () => [...new Set(S.prices.map(p=>String(p.cat||'').trim()).filter(Boolean))]
   .sort((a,b)=>a.localeCompare(b));
@@ -1775,6 +2014,178 @@ V.mix = () => {
 };
 
 /* ── take-off sheets ───────────────────────────────────────── */
+/* ── reinforcement bars take-off ───────────────────────────── */
+V.rbarSheet = () => {
+  const sc=S.scopes.find(x=>x.id==='rbar');
+  const path='take.rbar', rows=S.take.rbar||[];
+  const auto=(+S.meta.storeys>1)?'902(1)b':'902(1)a';
+  const payO=[['','Auto · '+auto],...payOpts().slice(1)];
+  const grO=GRADES.map(g=>[g.g,'Grade '+g.g+' · f\u1d67 '+g.fy]);
+  const off='disabled style="opacity:.25"';
+  let kg=0, tie=0, amount=0, bars=0;
+
+  const body=rows.map(r=>{
+    const w=Calc.unitMass(r.d), k=Calc.rbKg(r), t=Calc.rbTie(r), nb=Calc.rbBars(r);
+    const d=Calc.dupa(Calc.rbPay(r)); const b=d?Calc.dupaBid(d):null;
+    const amt=b?k*b.bid:0;
+    kg+=k; tie+=t; amount+=amt; bars+=nb;
+    const cnt=r.meth==='count', spc=r.meth==='space', msh=r.meth==='mesh';
+    return `<tr>
+      <td style="min-width:230px">${inp(path,r.id,'desc','text')}</td>
+      <td style="width:135px">${sel(path,r.id,'el',RB_EL)}</td>
+      <td style="min-width:170px">${sel(path,r.id,'pay',payO)}</td>
+      <td style="width:190px">${sel(path,r.id,'meth',RB_METH)}</td>
+      <td style="width:104px">${sel(path,r.id,'d',REBAR.map(x=>[x.d,x.d+' mmØ']))}</td>
+      <td style="width:132px">${sel(path,r.id,'gr',grO)}</td>
+      <td class="n num" style="width:74px;color:var(--muted)">${F.n(w,3)}</td>
+      <td class="n" style="width:96px">${inp(path,r.id,'len','len',(cnt||spc)?'':off)}</td>
+      <td class="n" style="width:84px">${inp(path,r.id,'nb','num',cnt?'':off)}</td>
+      <td class="n" style="width:100px">${msh?inp(path,r.id,'l','len'):inp(path,r.id,'run','len',spc?'':off)}</td>
+      <td class="n" style="width:96px">${inp(path,r.id,'w','len',msh?'':off)}</td>
+      <td class="n" style="width:96px">${msh?inp(path,r.id,'sph','len'):inp(path,r.id,'sp','len',spc?'':off)}</td>
+      <td class="n" style="width:96px">${inp(path,r.id,'spv','len',msh?'':off)}</td>
+      <td class="n" style="width:80px">${inp(path,r.id,'n','num')}</td>
+      <td class="n" style="width:80px">${inp(path,r.id,'lap','num')}</td>
+      <td class="n" style="width:88px">${inp(path,r.id,'tw','num')}</td>
+      <td class="n num calc" style="width:86px">${F.n(nb,0)}</td>
+      <td class="n num calc" style="width:104px">${F.n(U.out(Calc.rbLen(r),'L'),2)}</td>
+      <td class="n num calc" style="width:112px"><b>${F.n(U.out(k,'M'),2)}</b></td>
+      <td class="n num" style="width:96px">${F.n(U.out(t,'M'),2)}</td>
+      <td class="n num" style="width:118px">${b?F.m(b.bid):'<span class="pill y">no rate</span>'}</td>
+      <td class="n num calc" style="width:128px">${b?F.m(amt):'—'}</td>
+      <td class="c">${del(path,r.id)}</td></tr>`;
+  }).join('');
+
+  const cfgStrip = `<div class="pad noprint" style="border-bottom:1px solid var(--rule-soft);background:var(--surface-2)">
+    <div class="fgrid" style="grid-template-columns:2fr 1fr 3fr">
+      <div class="f"><label>Sheet name</label>
+        <input value="${F.esc(sc.name)}" onchange="App.scopeSet('rbar','name',this.value)"></div>
+      <div class="f"><label>Pay item range</label>
+        <input value="${F.esc(sc.code||'')}" onchange="App.scopeSet('rbar','code',this.value)"></div>
+      <div class="f"><label>Sheet note</label>
+        <input value="${F.esc(sc.note||'')}" onchange="App.scopeSet('rbar','note',this.value)"></div>
+    </div></div>`;
+
+  const L=U.u('L'), M=U.u('M');
+  return `
+  ${kpi([
+    {l:'Reinforcement measured',v:F.n(U.out(kg,'M'),0)+' '+M,tone:'hi'},
+    {l:'G.I. tie wire',v:F.n(U.out(tie,'M'),1)+' '+M,s:'carried per line'},
+    {l:'Bars scheduled',v:F.n(bars,0),s:rows.length+' line'+(rows.length===1?'':'s')},
+    {l:'Scope amount',v:F.short(amount),s:'at '+auto}
+  ])}
+  ${card(sc.name+' take-off', sc.code||'902',
+    `${cfgStrip}
+     <div class="pad" style="padding-bottom:0"><p class="hint">Three ways to count a line. <b>Count</b> for main bars where you know how many go in each member. <b>Spacing</b> for ties and stirrups — give one bar's cut length, the run they cover and the centre-to-centre spacing, and the number per set follows. <b>Mesh</b> for slabs and walls reinforced both ways — give the panel size and the horizontal and vertical spacings, and both bar groups are counted. Greyed boxes are the ones the chosen method does not use. Lap covers splices, hooks and bends; 1.05 for straight bar, 1.08 where column and beam laps are dense. Leave the pay item on <i>Auto</i> and it follows the storey count on the settings sheet.</p></div>
+     <div class="tw"><table><thead><tr>
+      <th>Description / bar mark</th><th>Element</th><th>Pay item</th><th>Method</th>
+      <th>Bar size</th><th>Grade</th><th class="n">kg/m</th>
+      <th class="n">Cut length (${L})</th><th class="n">Bars/set</th>
+      <th class="n">Run / Panel L (${L})</th><th class="n">Panel W (${L})</th>
+      <th class="n">Spacing H (${L})</th><th class="n">Spacing V (${L})</th>
+      <th class="n">Sets</th><th class="n">Lap</th><th class="n">Tie wire ${M}/100${M}</th>
+      <th class="n">Bars</th><th class="n">Length (${L})</th><th class="n">Weight (${M})</th>
+      <th class="n">Tie wire (${M})</th><th class="n">Unit bid price</th><th class="n">Amount</th><th></th>
+      </tr></thead>
+      <tbody>${body||'<tr><td colspan="23" style="padding:22px;text-align:center;color:var(--muted)">No bars measured yet. Add the first line below.</td></tr>'}
+      <tr class="tot"><td colspan="18">Total reinforcement</td>
+        <td class="n">${F.n(U.out(kg,'M'),2)}</td><td class="n">${F.n(U.out(tie,'M'),2)}</td>
+        <td></td><td class="n">${F.m(amount)}</td><td></td></tr>
+      </tbody></table></div>`,
+    `<button class="btn pri" onclick="App.addTake('rbar')">Add line</button>
+     <button class="btn" onclick="App.dupTake('rbar')">Duplicate last line</button>
+     <button class="btn" onclick="App.go('rebar')">Open the bar schedule</button>
+     <span class="sp" style="flex:1"></span>
+     <span style="align-self:center;font-size:12px;color:var(--muted)">Built-in sheet — rename it freely, but it cannot be deleted.</span>`)}`;
+};
+
+/* ── steel works take-off ──────────────────────────────────── */
+V.stlSheet = () => {
+  const sc=S.scopes.find(x=>x.id==='stl');
+  const path='take.stl', rows=S.take.stl||[];
+  const off='disabled style="opacity:.25"';
+  let kg=0, amount=0;
+
+  const secOpts = cur => {
+    const known=SW_SECTIONS.some(x=>x[0]===cur);
+    return [['','— not listed / custom —'],
+            ...(known||!cur?[]:[[cur,cur+'  (custom)']]),
+            ...SW_SECTIONS.map(x=>[x[0],x[0]+'   ·   '+x[1].toFixed(2)+' kg/m'])];
+  };
+
+  const body=rows.map(r=>{
+    const k=Calc.stlKg(r);
+    const d=Calc.dupa(r.pay); const b=d?Calc.dupaBid(d):null;
+    const amt=b?k*b.bid:0; kg+=k; amount+=amt;
+    const byLen=r.by==='len';
+    return `<tr>
+      <td style="min-width:250px">${inp(path,r.id,'desc','text')}</td>
+      <td style="min-width:170px">${sel(path,r.id,'pay',payOpts())}</td>
+      <td style="width:160px">${sel(path,r.id,'cls',SW_CLS)}</td>
+      <td style="min-width:230px"><select class="cell" onchange="App.stlSec('${r.id}',this.value)">
+        ${secOpts(r.sec).map(o=>`<option value="${F.esc(o[0])}" ${String(o[0])===String(r.sec||'')?'selected':''}>${F.esc(o[1])}</option>`).join('')}
+      </select></td>
+      <td style="width:190px">${sel(path,r.id,'by',SW_BY)}</td>
+      <td class="n" style="width:110px">${inp(path,r.id,'um','num')}</td>
+      <td class="n" style="width:96px">${inp(path,r.id,'len','len',byLen?'':off)}</td>
+      <td class="n" style="width:82px">${inp(path,r.id,'n','num')}</td>
+      <td class="n" style="width:82px">${inp(path,r.id,'f','num')}</td>
+      <td class="n num calc" style="width:118px"><b>${F.n(U.out(k,'M'),2)}</b></td>
+      <td style="min-width:180px">${sel(path,r.id,'basis',coefOpts())}</td>
+      <td class="n num" style="width:118px">${b?F.m(b.bid):'<span class="pill y">no rate</span>'}</td>
+      <td class="n num calc" style="width:130px">${b?F.m(amt):'—'}</td>
+      <td class="c">${del(path,r.id)}</td></tr>`;
+  }).join('');
+
+  const byClass=new Map();
+  rows.forEach(r=>{ const c=r.cls||'Other';
+    byClass.set(c,(byClass.get(c)||0)+Calc.stlKg(r)); });
+  const clsRows=[...byClass.entries()].sort((a,b)=>b[1]-a[1]).map(([c,v])=>
+    `<tr><td>${F.esc(c)}</td><td class="n num">${F.n(U.out(v,'M'),2)}</td>
+     <td class="n num">${kg?F.n(v/kg*100,1):'0.0'}%</td></tr>`).join('');
+
+  const cfgStrip = `<div class="pad noprint" style="border-bottom:1px solid var(--rule-soft);background:var(--surface-2)">
+    <div class="fgrid" style="grid-template-columns:2fr 1fr 3fr">
+      <div class="f"><label>Sheet name</label>
+        <input value="${F.esc(sc.name)}" onchange="App.scopeSet('stl','name',this.value)"></div>
+      <div class="f"><label>Pay item range</label>
+        <input value="${F.esc(sc.code||'')}" onchange="App.scopeSet('stl','code',this.value)"></div>
+      <div class="f"><label>Sheet note</label>
+        <input value="${F.esc(sc.note||'')}" onchange="App.scopeSet('stl','note',this.value)"></div>
+    </div></div>`;
+
+  const L=U.u('L'), M=U.u('M');
+  return `
+  ${kpi([
+    {l:'Steel measured',v:F.n(U.out(kg,'M'),0)+' '+M,tone:'hi'},
+    {l:'Lines',v:rows.length},
+    {l:'Classes used',v:byClass.size},
+    {l:'Scope amount',v:F.short(amount)}
+  ])}
+  ${card(sc.name+' take-off', sc.code||'SPL-S',
+    `${cfgStrip}
+     <div class="pad" style="padding-bottom:0"><p class="hint">Steel is measured by weight, which is how it is bought, fabricated and paid for. Pick a mill section and its unit mass fills itself in; anything not on the list can be typed over. Use <b>length × unit mass</b> for sections and framing, and <b>direct mass per piece</b> for plates, gates, grilles, ladders and consumables. The factor carries cutting waste and weld metal — 1.02 to 1.05 is usual. Roof trusses, purlins and sagrods stay on the Roofing Works sheet.</p></div>
+     <div class="tw"><table><thead><tr>
+      <th>Description</th><th>Pay item</th><th>Class</th><th>Section / profile</th><th>Measured by</th>
+      <th class="n">Unit mass (${M}/${L} or ${M})</th><th class="n">Length (${L})</th>
+      <th class="n">No.</th><th class="n">Factor</th><th class="n">Weight (${M})</th>
+      <th>Material basis</th><th class="n">Unit bid price</th><th class="n">Amount</th><th></th>
+      </tr></thead>
+      <tbody>${body||'<tr><td colspan="14" style="padding:22px;text-align:center;color:var(--muted)">No steel measured yet. Add the first line below.</td></tr>'}
+      <tr class="tot"><td colspan="9">Total steel</td><td class="n">${F.n(U.out(kg,'M'),2)}</td>
+        <td></td><td></td><td class="n">${F.m(amount)}</td><td></td></tr>
+      </tbody></table></div>`,
+    `<button class="btn pri" onclick="App.addTake('stl')">Add line</button>
+     <button class="btn" onclick="App.dupTake('stl')">Duplicate last line</button>
+     <span class="sp" style="flex:1"></span>
+     <span style="align-self:center;font-size:12px;color:var(--muted)">Built-in sheet — rename it freely, but it cannot be deleted.</span>`)}
+  ${card('Steel by class','Fabrication summary',
+    `<div class="tw"><table><thead><tr><th>Class</th><th class="n">Weight (${M})</th><th class="n">Share</th></tr></thead>
+     <tbody>${clsRows||'<tr><td colspan="3" style="padding:18px;text-align:center;color:var(--muted)">Nothing measured yet.</td></tr>'}
+     <tr class="tot"><td>Total</td><td class="n">${F.n(U.out(kg,'M'),2)}</td><td class="n">${kg?'100.0%':'0.0%'}</td></tr>
+     </tbody></table></div>`)}`;
+};
+
 V.takeoff = (scopeId) => {
   const sc=S.scopes.find(x=>x.id===scopeId);
   if(!sc) return '<div class="card"><div class="pad">That take-off sheet no longer exists.</div></div>';
@@ -1831,54 +2242,108 @@ V.takeoff = (scopeId) => {
                 :`<span style="align-self:center;font-size:12px;color:var(--muted)">Built-in sheet — rename it freely, but it cannot be deleted.</span>`}`);
 };
 
-/* ── rebar schedule ────────────────────────────────────────── */
+/* ── rebar schedule (read off the Reinforcement bars sheet) ─── */
 V.rebar = () => {
   const auto=(+S.meta.storeys>1)?'902(1)b':'902(1)a';
-  const payO=[['','Auto · '+auto],...payOpts().slice(1)];
-  const grO=GRADES.map(g=>[g.g,'Grade '+g.g+' · f\u1d67 '+g.fy+' MPa']);
-  let kg=0; const byGrade={};
-  const body=S.rebar.map(r=>{
-    const w=(REBAR.find(x=>x.d==r.d)||{w:0}).w, k=Calc.rebarKg(r); kg+=k;
-    byGrade[r.gr]=(byGrade[r.gr]||0)+k;
-    const g=GRADES.find(x=>x.g===r.gr)||GRADES[1];
-    const pcs=(+r.len||0)*(+r.nb||0)*(+r.n||0)*(+r.lap||1)/12;
+  const sched=Calc.barSchedule();
+  const rows=S.take.rbar||[];
+  const kg=sched.reduce((a,x)=>a+x.kg,0);
+  const tie=Calc.rbTieTotal();
+  const byGrade={}; sched.forEach(x=>byGrade[x.gr]=(byGrade[x.gr]||0)+x.kg);
+  const L=U.u('L'), M=U.u('M');
+
+  const body=sched.map(x=>{
+    const g=GRADES.find(y=>y.g===x.gr)||GRADES[1];
+    const pcs=x.m/12;
+    const spTxt = x.sp ? ' @ '+F.n(U.out(x.sp,'L'),3)+' '+L+' o.c.' : '';
     return `<tr>
-      <td style="min-width:200px">${inp('rebar',r.id,'el','text')}</td>
-      <td style="width:100px">${sel('rebar',r.id,'d',REBAR.map(x=>[x.d,x.d+' mmØ']))}</td>
-      <td style="width:150px">${sel('rebar',r.id,'gr',grO)}</td>
-      <td class="n num" style="width:80px">${g.fy}</td>
-      <td class="n num" style="width:82px">${F.n(w,3)}</td>
-      <td class="n" style="width:100px">${inp('rebar',r.id,'len','len')}</td>
-      <td class="n" style="width:92px">${inp('rebar',r.id,'nb','num')}</td>
-      <td class="n" style="width:92px">${inp('rebar',r.id,'n','num')}</td>
-      <td class="n" style="width:88px">${inp('rebar',r.id,'lap','num')}</td>
-      <td class="n num calc" style="width:112px">${F.n(U.out(k,'M'),2)}</td>
-      <td class="n num" style="width:100px">${F.n(pcs,1)}</td>
-      <td style="min-width:160px">${sel('rebar',r.id,'pay',payO)}</td>
-      <td class="c">${del('rebar',r.id)}</td></tr>`;
+      <td style="min-width:210px">${x.sub?'<span style="color:var(--muted)">↳ </span>':''}${F.esc(x.mark)}</td>
+      <td style="font-size:12px;color:var(--muted)">${F.esc(x.el)}</td>
+      <td style="font-size:12px">${F.esc(x.part)}${spTxt}</td>
+      <td class="n num"><b>${x.d}</b> mmØ</td>
+      <td class="n num">${x.gr}</td>
+      <td class="n num" style="color:var(--muted)">${g.fy}</td>
+      <td class="n num">${F.n(x.w,3)}</td>
+      <td class="n num">${F.n(U.out(x.cut,'L'),3)}</td>
+      <td class="n num">${F.n(x.per,0)}</td>
+      <td class="n num">${F.n(x.sets,0)}</td>
+      <td class="n num">${F.n(x.tot,0)}</td>
+      <td class="n num" style="color:var(--muted)">${F.n(x.lap,2)}</td>
+      <td class="n num">${F.n(U.out(x.m,'L'),2)}</td>
+      <td class="n num calc"><b>${F.n(U.out(x.kg,'M'),2)}</b></td>
+      <td class="n num">${F.n(pcs,1)}</td>
+      <td style="font-size:12px">${F.esc(x.pay)}</td></tr>`;
   }).join('');
+
+  const totLen=sched.reduce((a,x)=>a+x.m,0);
+
+  /* procurement: what actually gets ordered, by diameter */
+  const byDia=new Map();
+  sched.forEach(x=>{ const c=byDia.get(x.d)||{d:x.d,w:x.w,m:0,kg:0};
+    c.m+=x.m; c.kg+=x.kg; byDia.set(x.d,c); });
+  const diaRows=[...byDia.values()].sort((a,b)=>a.d-b.d).map(c=>
+    `<tr><td class="n num"><b>${c.d}</b> mmØ</td><td class="n num">${F.n(c.w,3)}</td>
+     <td class="n num">${F.n(U.out(c.m,'L'),2)}</td>
+     <td class="n num calc">${F.n(U.out(c.kg,'M'),2)}</td>
+     <td class="n num">${F.n(Math.ceil(c.m/6),0)}</td>
+     <td class="n num">${F.n(Math.ceil(c.m/9),0)}</td>
+     <td class="n num">${F.n(Math.ceil(c.m/12),0)}</td></tr>`).join('');
+
   const gradeSplit=GRADES.map(g=>`<tr><td><b>Grade ${g.g}</b> · f\u1d67 ${g.fy} MPa</td>
       <td class="n num">${F.n(U.out(byGrade[g.g]||0,'M'),2)}</td>
       <td class="n num">${kg?F.n((byGrade[g.g]||0)/kg*100,1):'0.0'}%</td></tr>`).join('');
+
+  const twPrice=S.prices.find(x=>x.name==='G.I. tie wire #16');
+  const stPrice=S.prices.find(x=>x.name==='Reinforcing steel (by weight)');
+
   return `
   ${kpi([
-    {l:'Total reinforcement',v:F.n(U.out(kg,'M'),0)+' '+U.u('M'),tone:'hi'},
+    {l:'Total reinforcement',v:F.n(U.out(kg,'M'),0)+' '+M,tone:'hi'},
     {l:'Grade 60 share',v:kg?F.n((byGrade['60']||0)/kg*100,1)+'%':'0%',s:'f\u1d67 415 MPa'},
+    {l:'G.I. tie wire',v:F.n(U.out(tie,'M'),1)+' '+M,s:'measured per bar line'},
     {l:'Default pay item',v:auto,s:S.meta.storeys+' storey'+(S.meta.storeys>1?'s':'')},
-    {l:'Elements scheduled',v:S.rebar.length}
+    {l:'Bar groups',v:sched.length,s:rows.length+' measured line'+(rows.length===1?'':'s')}
   ])}
   ${card('Bar schedule','902(1)',
-    `<div class="pad" style="padding-bottom:0"><p class="hint">Unit mass follows PNS 49 as adopted in NSCP 2015 and is the same for every grade — grade changes the yield strength you design to, not the weight you buy. The lap factor covers splices, hooks and bends: 1.05 for straight bars, 1.08 where column and beam laps are dense. Piece counts assume 12 m commercial lengths.</p></div>
-     <div class="tw"><table><thead><tr><th>Element</th><th>Bar size</th><th>Grade</th><th class="n">f\u1d67 MPa</th><th class="n">kg/m</th>
-      <th class="n">Length (${U.u('L')})</th><th class="n">Bars/set</th><th class="n">Sets</th>
-      <th class="n">Lap</th><th class="n">Weight (${U.u('M')})</th><th class="n">Pcs @ 12 m</th><th>Pay item</th><th></th></tr></thead>
-      <tbody>${body}<tr class="tot"><td colspan="9">Total</td><td class="n">${F.n(U.out(kg,'M'),2)}</td><td></td><td></td><td></td></tr>
+    `<div class="pad" style="padding-bottom:0">
+      <div class="note">This schedule is <b>read from the Reinforcement bars take-off sheet</b> — it is not a second place to enter bars. A line measured as a two-way mesh appears here as its two bar groups, horizontal and vertical, because that is how the bar bender needs it. Unit mass follows PNS 49 as adopted in NSCP 2015 and is the same for every grade: grade changes the yield strength you design to, not the weight you buy. Piece counts assume 12 m commercial lengths.</div></div>
+     <div class="tw"><table><thead><tr>
+      <th>Bar mark / description</th><th>Element</th><th>Bar group</th><th class="n">Bar size</th>
+      <th class="n">Grade</th><th class="n">f\u1d67 MPa</th><th class="n">kg/m</th>
+      <th class="n">Cut length (${L})</th><th class="n">Bars/set</th><th class="n">Sets</th>
+      <th class="n">Total bars</th><th class="n">Lap</th><th class="n">Length (${L})</th>
+      <th class="n">Weight (${M})</th><th class="n">Pcs @ 12 m</th><th>Pay item</th></tr></thead>
+      <tbody>${body||'<tr><td colspan="16" style="padding:22px;text-align:center;color:var(--muted)">No bars measured. Open the Reinforcement bars take-off sheet and add the first line.</td></tr>'}
+      <tr class="tot"><td colspan="12">Total</td>
+        <td class="n">${F.n(U.out(totLen,'L'),2)}</td>
+        <td class="n">${F.n(U.out(kg,'M'),2)}</td><td></td><td></td></tr>
       </tbody></table></div>`,
-    `<button class="btn pri" onclick="App.add('rebar')">Add element</button>`)}
+    `<button class="btn pri" onclick="App.go('tk_rbar')">Edit on the Reinforcement bars sheet</button>
+     <button class="btn" onclick="App.exportCSV()">Export this sheet (.csv)</button>`)}
+  ${card('Bar list by diameter','Procurement',
+    `<div class="pad" style="padding-bottom:0"><p class="hint">Piece counts are rounded up, and take no account of how usefully the offcuts can be re-used — treat them as an order ceiling, not a cutting optimisation.</p></div>
+     <div class="tw"><table><thead><tr><th class="n">Bar size</th><th class="n">kg/m</th>
+      <th class="n">Total length (${L})</th><th class="n">Weight (${M})</th>
+      <th class="n">Pcs @ 6 m</th><th class="n">Pcs @ 9 m</th><th class="n">Pcs @ 12 m</th></tr></thead>
+     <tbody>${diaRows||'<tr><td colspan="7" style="padding:18px;text-align:center;color:var(--muted)">Nothing scheduled yet.</td></tr>'}
+     <tr class="tot"><td colspan="3">Total</td><td class="n">${F.n(U.out(kg,'M'),2)}</td>
+      <td></td><td></td><td></td></tr></tbody></table></div>`)}
   <div class="two">
   ${card('Reinforcement by grade','Procurement split',
-    `<div class="tw"><table><thead><tr><th>Grade</th><th class="n">Weight (${U.u('M')})</th><th class="n">Share</th></tr></thead>
-     <tbody>${gradeSplit}<tr class="tot"><td>Total</td><td class="n">${F.n(U.out(kg,'M'),2)}</td><td class="n">100.0%</td></tr></tbody></table></div>`)}
+    `<div class="tw"><table><thead><tr><th>Grade</th><th class="n">Weight (${M})</th><th class="n">Share</th></tr></thead>
+     <tbody>${gradeSplit}<tr class="tot"><td>Total</td><td class="n">${F.n(U.out(kg,'M'),2)}</td><td class="n">${kg?'100.0%':'0.0%'}</td></tr></tbody></table></div>`)}
+  ${card('Tie wire and accessories','From the take-off sheet',
+    `<div class="tw"><table><thead><tr><th>Item</th><th class="n">Quantity</th><th>Unit</th><th class="n">Rate</th><th class="n">Amount</th></tr></thead>
+     <tbody>
+      <tr><td>Reinforcing steel, all grades</td><td class="n num">${F.n(U.out(kg,'M'),2)}</td><td>${M}</td>
+        <td class="n num">${stPrice?F.m(stPrice.rate):'—'}</td>
+        <td class="n num calc">${stPrice?F.m(kg*stPrice.rate):'—'}</td></tr>
+      <tr><td>G.I. tie wire #16</td><td class="n num">${F.n(U.out(tie,'M'),2)}</td><td>${M}</td>
+        <td class="n num">${twPrice?F.m(twPrice.rate):'—'}</td>
+        <td class="n num calc">${twPrice?F.m(tie*twPrice.rate):'—'}</td></tr>
+     </tbody></table></div>
+     <div class="pad"><p class="hint">Tie wire is carried as a percentage of bar weight on each take-off line — 2% for main bars, 2.5% where ties and stirrups are close. Change it per line on the Reinforcement bars sheet; the bill of materials reads the same figure.</p></div>`)}
+  </div>
   ${card('PNS 49 / NSCP 2015 unit mass','Reference',
     `<div class="tw"><table><thead><tr><th class="n">Ø mm</th><th class="n">kg/m</th><th class="n">Area mm²</th>
       <th class="n">6 m</th><th class="n">9 m</th><th class="n">12 m</th></tr></thead>
@@ -1886,7 +2351,6 @@ V.rebar = () => {
        <td class="n num">${F.n(Math.PI*x.d*x.d/4,1)}</td><td class="n num">${(x.w*6).toFixed(2)}</td>
        <td class="n num">${(x.w*9).toFixed(2)}</td><td class="n num">${(x.w*12).toFixed(2)}</td></tr>`).join('')}
      </tbody></table></div>`)}
-  </div>
   ${card('Reinforcing bar grades','PNS 49 · ASTM A615 · NSCP 2015',
     `<div class="tw"><table><thead><tr><th>Grade</th><th>PNS 49 designation</th><th class="n">f\u1d67 MPa</th>
       <th>ASTM equivalent</th><th class="n">ASTM f\u1d67 MPa</th><th class="n">Min. tensile MPa</th>
@@ -1898,6 +2362,7 @@ V.rebar = () => {
      </tbody></table></div>
      <div class="pad"><div class="note"><b>Grade 33 is not interchangeable.</b> Philippine mills still sell 10 mm and 12 mm bar as Grade 230, and it is fine for ties and slab bars in ordinary construction — but NSCP 2015 §421 bars it from members resisting earthquake forces, where the drawings will call for Grade 415. If a bar list came in without a grade, check the schedule before you price it: the difference is roughly ₱2 to ₱4 a kilo, and substituting downward is a structural defect, not a saving.</div></div>`)}`;
 };
+
 
 /* ── quantity take-off summary ─────────────────────────────── */
 V.qto = () => {
@@ -2260,13 +2725,27 @@ V.ref = () => {
 const App = {
   view: 'setup',
 
-  rail(show){ S.ui.rail=!!show; App.render();
-    if(show){ const b=document.querySelector('.railclose'); if(b) b.focus(); }
-    else { const b=document.getElementById('railShow'); if(b) b.focus(); } },
+  /* One control, one place. On a wide screen it collapses the rail; on a narrow
+     one it opens and closes the drawer. Either way the button stays put. */
+  drawer(){ try{ return !!(window.matchMedia && window.matchMedia('(max-width:900px)').matches); }
+            catch(e){ return false; } },
+  railOpen(){ return App.drawer() ? document.body.classList.contains('nav-open')
+                                  : S.ui.rail!==false; },
+  rail(){
+    if(App.drawer()){ document.body.classList.toggle('nav-open'); App.railBtn(); }
+    else { S.ui.rail = !App.railOpen(); App.render(); }
+  },
+  railBtn(){
+    const b=document.getElementById('railBtn'); if(!b) return;
+    const open=App.railOpen();
+    b.textContent = open ? '\u2039 Hide sidebar' : '\u2630 Show sidebar';
+    b.title = open ? 'Hide the sidebar' : 'Show the sidebar';
+    b.setAttribute('aria-expanded', open ? 'true' : 'false');
+  },
 
   go(id){ App.view=id; S.ui._focus=null; App.render();
           window.scrollTo({top:0,behavior:'auto'});
-          document.body.classList.remove('nav-open'); },
+          document.body.classList.remove('nav-open'); App.railBtn(); },
 
   render(){
     const MODS=modules();
@@ -2283,6 +2762,10 @@ const App = {
       (g==='Take-off'
         ? `<button class="navbtn" style="color:var(--signal)" onclick="App.newScope()">
              <span class="cd">＋</span><span>New take-off sheet</span></button>` : '')+
+      (g==='Dashboard'
+        ? `<a class="navbtn qsr" href="https://qsreports.darkwizlab.com" target="_blank"
+              rel="noopener noreferrer" title="Open QS Reports in a new tab">
+             <span class="cd">QSR</span><span>QS Reports</span><span class="ext">↗</span></a>` : '')+
       `</div>`).join('');
 
     /* title block */
@@ -2306,6 +2789,8 @@ const App = {
     const sb=document.getElementById('btnSaveHTML');
     if(sb) sb.textContent = App._fh ? 'Save' : 'Save to this file';
 
+    App.railBtn();
+
     /* toolbar toggles */
     document.querySelectorAll('#segUnit button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.cfg.units));
     document.querySelectorAll('#segCur button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.cfg.currency));
@@ -2313,7 +2798,9 @@ const App = {
 
     /* body */
     let html='';
-    if(m.scope) html=V.takeoff(m.scope);
+    if(m.scope) html = m.scope==='rbar' ? V.rbarSheet()
+                     : m.scope==='stl'  ? V.stlSheet()
+                     : V.takeoff(m.scope);
     else if(V[m.id]) html=V[m.id]();
     else html='<div class="card"><div class="pad">Module not available.</div></div>';
     document.getElementById('sheet').innerHTML=html;
@@ -2327,11 +2814,14 @@ const App = {
   },
 
   /* generic row editing */
+  /* Accept anything a person would reasonably type into a money box —
+     "1,250,000", "₱ 1 250 000", "1250000.50" — and keep the number. */
+  num(val){ return parseFloat(String(val??'').replace(/[^0-9.eE+-]/g,''))||0; },
   upd(path,id,key,val,kind){
     const row=collOf(path).find(x=>x.id===id); if(!row) return;
-    if(kind==='len')        row[key]=U.in(parseFloat(val)||0,'L');
-    else if(kind==='money') row[key]=U.moneyIn(parseFloat(val)||0);
-    else if(kind==='num'||kind==='pct') row[key]=parseFloat(val)||0;
+    if(kind==='len')        row[key]=U.in(App.num(val),'L');
+    else if(kind==='money') row[key]=U.moneyIn(App.num(val));
+    else if(kind==='num'||kind==='pct') row[key]=App.num(val);
     else row[key]=val;
     App.render();
   },
@@ -2341,7 +2831,6 @@ const App = {
     const c=collOf(path);
     const T={ prices:{cat:'',name:'',unit:'',dim:'PC',rate:0},
               dupa:{item:'SPL-'+String(S.dupa.length+1).padStart(2,'0'),desc:'New pay item',unit:'m²',dim:'A',lab:0,eqp:0,mat:0,on:true},
-              rebar:{el:'New element',pay:'',gr:'40',d:12,len:1,nb:1,n:1,lap:1.05},
               cc:{el:'New cost element',bud:0,act:0,com:0},
               port:{code:'PJ-'+(2400+S.port.length+1),name:'New project',ctr:0,bld:0,cost:0,st:'Tendering'} };
     const row={id:uid('x'),...(T[path]||{})};
@@ -2353,8 +2842,22 @@ const App = {
       if(el){ el.focus(); if(el.scrollIntoView) el.scrollIntoView({block:'center'}); }
     }
   },
-  addTake(sc){ (S.take[sc]=S.take[sc]||[]).push(
-      {id:uid('t'),desc:'New line',pay:'',mode:'A',l:0,w:0,h:0,n:1,f:1,basis:''}); App.render(); },
+  addTake(sc){
+    const c=(S.take[sc]=S.take[sc]||[]);
+    if(sc==='rbar')      c.push(rbarRow({}));
+    else if(sc==='stl')  c.push(stlRow({}));
+    else c.push({id:uid('t'),desc:'New line',pay:'',mode:'A',l:0,w:0,h:0,n:1,f:1,basis:''});
+    App.render();
+  },
+  /* Picking a mill section fills in its unit mass; a custom section leaves the
+     mass alone so a fabricator's own figure is never overwritten. */
+  stlSec(id,val){
+    const r=(S.take.stl||[]).find(x=>x.id===id); if(!r) return;
+    r.sec=val;
+    const hit=SW_SECTIONS.find(x=>x[0]===val);
+    if(hit) r.um=hit[1];
+    App.render();
+  },
   dupTake(sc){ const a=S.take[sc]||[]; if(!a.length) return App.addTake(sc);
       a.push({...a[a.length-1],id:uid('t')}); App.render(); },
   addCoefItem(cid){
